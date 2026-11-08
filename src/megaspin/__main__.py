@@ -34,6 +34,8 @@ def main() -> int:
     from .ui.theme import stylesheet
 
     app = QApplication(sys.argv)
+    from PySide6.QtCore import Qt
+    app.setEffectEnabled(Qt.UIEffect.UI_AnimateCombo, False)     # no flicker when combo boxes open
     app.setApplicationName("MegaSpin")
     app.setOrganizationName("megaspin")
     settings = Settings.load()

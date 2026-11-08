@@ -34,6 +34,9 @@ QPushButton:default, QPushButton#Primary {{ background: {accent}; border-color: 
 QPushButton:disabled {{ color: {c['text2']}; }}
 QSpinBox, QLineEdit, QComboBox {{ background: {c['card']}; border: 1px solid {c['border']}; border-radius: 6px; padding: 5px 8px; }}
 QSpinBox:focus, QLineEdit:focus, QComboBox:focus {{ border-color: {accent}; }}
+QComboBox {{ combobox-popup: 0; }}
+QComboBox QAbstractItemView {{ background: {c['card']}; border: 1px solid {c['border']}; outline: 0;
+    selection-background-color: {accent}; padding: 2px; }}
 QListWidget {{ background: {c['card']}; border: 1px solid {c['border']}; border-radius: 6px; }}
 QListWidget::item {{ padding: 6px; }}
 QListWidget::item:selected {{ background: {accent}; }}

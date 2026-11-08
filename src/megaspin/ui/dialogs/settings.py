@@ -78,9 +78,6 @@ class SettingsDialog(QDialog):
             h.addWidget(b)
         h.addStretch()
         root.addWidget(g)
-        self.l_accent_hint = QLabel("Die Farbe gilt sofort für Knöpfe und Auswahl, für alle Elemente nach einem Neustart.")
-        self.l_accent_hint.setObjectName("Subtitle")
-        root.addWidget(self.l_accent_hint)
 
         # ---- data
         g = QGroupBox("Daten")

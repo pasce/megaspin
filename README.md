@@ -28,19 +28,19 @@ MegaSpin talks to the changer over the same serial link (PC-LINK). It turns your
 **Then: the original "CD Changer Controller" (NetNamer) on Windows XP**
 
 <p>
-<a href="screenshots/original-software-control.jpg"><img src="screenshots/original-software-control.jpg" alt="Original software – Control" width="420"></a>
-<a href="screenshots/original-software-edit.jpg"><img src="screenshots/original-software-edit.jpg" alt="Original software – Edit" width="420"></a>
+<a href="screenshots/original-software-control.jpg"><img src="screenshots/original-software-control.jpg" alt="Original software – Control"></a>
+<a href="screenshots/original-software-edit.jpg"><img src="screenshots/original-software-edit.jpg" alt="Original software – Edit"></a>
 </p>
 
 **Now: MegaSpin**
 
 <p>
-<a href="screenshots/megaspin-grouped-by-artist.png"><img src="screenshots/megaspin-grouped-by-artist.png" alt="MegaSpin – grouped by artist" width="420"></a>
-<a href="screenshots/megaspin-album-details.png"><img src="screenshots/megaspin-album-details.png" alt="MegaSpin – album details" width="420"></a>
+<a href="screenshots/megaspin-grouped-by-artist.png"><img src="screenshots/megaspin-grouped-by-artist.png" alt="MegaSpin – grouped by artist"></a>
+<a href="screenshots/megaspin-album-details.png"><img src="screenshots/megaspin-album-details.png" alt="MegaSpin – album details"></a>
 </p>
 <p>
-<a href="screenshots/megaspin-edit-album.png"><img src="screenshots/megaspin-edit-album.png" alt="MegaSpin – edit album and write to the changer" width="420"></a>
-<a href="screenshots/megaspin-user_files.png"><img src="screenshots/megaspin-user_files.png" alt="MegaSpin – albums of a user file" width="420"></a>
+<a href="screenshots/megaspin-edit-album.png"><img src="screenshots/megaspin-edit-album.png" alt="MegaSpin – edit album and write to the changer"></a>
+<a href="screenshots/megaspin-user_files.png"><img src="screenshots/megaspin-user_files.png" alt="MegaSpin – albums of a user file"></a>
 </p>
 
 <sub>Library grouped by artist (cover collage with album count) · album details with track list ·

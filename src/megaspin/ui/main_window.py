@@ -194,6 +194,7 @@ class MainWindow(QMainWindow):
         lay.setContentsMargins(16, 8, 12, 8)
         logo = QLabel()
         logo.setPixmap(icon("disc", self.settings.accent, 22).pixmap(22, 22))
+        self.logo = logo
         name = QLabel("MegaSpin")
         name.setObjectName("AppName")
         lay.addWidget(logo)
@@ -778,8 +779,7 @@ class MainWindow(QMainWindow):
             return
         changed = dlg.apply()
         if "accent" in changed:
-            from .theme import stylesheet
-            QApplication.instance().setStyleSheet(stylesheet(self.settings.accent))
+            self.apply_accent(self.settings.accent)
         if changed.get("mb_enabled"):
             self.meta.enqueue_missing()
         if "port" in changed and self.settings.port:
@@ -787,6 +787,24 @@ class MainWindow(QMainWindow):
                     == QMessageBox.StandardButton.Yes:
                 self.connect_to(self.settings.port)
         self.statusBar().showMessage("Einstellungen gespeichert", 4000)
+
+    def apply_accent(self, accent: str) -> None:
+        """New accent colour without restart: stylesheet plus all widgets that paint it themselves."""
+        from PySide6.QtGui import QColor as _QColor
+        from .theme import stylesheet
+        QApplication.instance().setStyleSheet(stylesheet(accent))
+        self.sidebar.set_accent(accent)
+        self.grid.delegate.accent = _QColor(accent)
+        self.grid.viewport().update()
+        self.detail.accent = accent
+        self.pl_view.accent = accent
+        self.player.set_accent(accent, self.status)
+        self.logo.setPixmap(icon("disc", accent, 22).pixmap(22, 22))
+        self.b_playsel.setIcon(icon("play", accent, 20))
+        if self.detail.album:
+            self.detail.mark_playing(*self.detail.playing)
+        self.pl_view.mark_playing(self.pl_view.playing_index)
+        self._refresh_now_playing()
 
     def open_console(self) -> None:
         self.console.show()

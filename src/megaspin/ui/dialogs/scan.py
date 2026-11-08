@@ -66,6 +66,7 @@ class ScanDialog(QDialog):
         self.status = QLabel("")
         self.log = QListWidget()
         self.log.setMinimumHeight(140)
+        self.log.setStyleSheet("QListWidget::item { padding: 1px 6px; }")
         lay.addWidget(self.bar)
         lay.addWidget(self.status)
         lay.addWidget(self.log, 1)
@@ -76,6 +77,9 @@ class ScanDialog(QDialog):
         self.b_start.setObjectName("Primary")
         self.b_cancel = QPushButton("Abbrechen")
         self.b_close = QPushButton("Schließen")
+        for b in (self.b_start, self.b_cancel, self.b_close):
+            b.setAutoDefault(False)          # otherwise Qt makes the first button "default" (accent colour)
+            b.setDefault(False)
         btns.addWidget(self.b_cancel)
         btns.addWidget(self.b_close)
         btns.addWidget(self.b_start)
@@ -117,6 +121,12 @@ class ScanDialog(QDialog):
     def _set_running(self, on: bool) -> None:
         self.b_start.setEnabled(not on)
         self.b_cancel.setEnabled(on)
+        # the accent colour marks the button that makes sense right now
+        self.b_start.setObjectName("" if on else "Primary")
+        self.b_cancel.setObjectName("Primary" if on else "")
+        for b in (self.b_start, self.b_cancel):
+            b.style().unpolish(b)
+            b.style().polish(b)
         for r in (self.r_quick, self.r_full, self.r_all, self.r_incomplete, self.r_selected):
             r.setEnabled(not on and (r is not self.r_selected or self.selected_slot_fn() is not None))
         if hasattr(self, "cb_fresh"):
@@ -157,4 +167,14 @@ class ScanDialog(QDialog):
     def _on_finished(self, ok: bool, text: str) -> None:
         self._set_running(False)
         self.status.setText(text)
+        from PySide6.QtGui import QColor
+        from ..theme import COLORS
+        line = ("✓ Fertig: " if ok else "✗ Abgebrochen/Fehler: ") + text
+        self.log.addItem(line)
+        it = self.log.item(self.log.count() - 1)
+        it.setForeground(QColor(COLORS["ok"] if ok else COLORS["err"]))
+        f = it.font()
+        f.setBold(True)
+        it.setFont(f)
+        self.log.scrollToBottom()
         self._update_estimate()

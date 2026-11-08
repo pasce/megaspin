@@ -4,10 +4,11 @@ from __future__ import annotations
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (QFrame, QGridLayout, QHBoxLayout, QHeaderView, QLabel, QPushButton,
-                               QToolButton, QTreeWidget, QTreeWidgetItem, QVBoxLayout)
+                               QToolButton, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
 
 from ..data.db import Album
 from ..protocol.constants import music_type_name
+from .flow_layout import FlowLayout
 from .icons import icon
 from .player_bar import fmt_time
 from .theme import COLORS
@@ -94,7 +95,8 @@ class AlbumDetail(QFrame):
         self.tracks.customContextMenuRequested.connect(self._track_menu)
         lay.addWidget(self.tracks, 2, 1)
 
-        btns = QHBoxLayout()
+        btn_box = QWidget()
+        btns = FlowLayout(btn_box, spacing=10)      # wraps to a second row when the panel is narrow
         self.b_full = QPushButton("Vollständig einlesen")
         self.b_full.setToolTip("Disc laden (ohne Wiedergabe) und Inhaltsverzeichnis + CD-TEXT lesen")
         self.b_full.clicked.connect(lambda: self.album and self.readFullRequested.emit(self.album.slot))
@@ -118,8 +120,7 @@ class AlbumDetail(QFrame):
         btns.addWidget(self.b_meta)
         btns.addWidget(self.b_match)
         btns.addWidget(self.b_cover)
-        btns.addStretch()
-        lay.addLayout(btns, 3, 1)
+        lay.addWidget(btn_box, 3, 1)
         lay.setRowStretch(2, 1)
         lay.setColumnStretch(1, 1)
 

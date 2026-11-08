@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections import Counter
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QColor, QFont
+from PySide6.QtGui import QColor, QFont, QPalette
 from PySide6.QtWidgets import QTreeWidget, QTreeWidgetItem
 
 from ..data.db import Album
@@ -25,17 +25,34 @@ class Sidebar(QTreeWidget):
         self.setHeaderHidden(True)
         self.setIndentation(10)
         self.setRootIsDecorated(False)
+        # neutral style: the Windows 11 style paints an extra selection marker left of the item
+        from PySide6.QtWidgets import QStyleFactory
+        fusion = QStyleFactory.create("Fusion")
+        if fusion is not None:
+            self._style = fusion                      # keep a reference (Qt does not take ownership)
+            self.setStyle(fusion)
         self.setMinimumWidth(190)
-        self.setStyleSheet(
-            f"QTreeWidget {{ background: {COLORS['panel']}; border: none; border-right: 1px solid {COLORS['border']};"
-            f" padding: 8px 4px; outline: 0; }}"
-            f"QTreeWidget::item {{ padding: 5px 6px; border-radius: 6px; }}"
-            f"QTreeWidget::item:hover {{ background: {COLORS['hover']}; }}"
-            f"QTreeWidget::item:selected {{ background: {accent}; color: white; }}")
+        self.set_accent(accent)
         self.itemClicked.connect(self._clicked)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._context)
         self._current = ("all", None)
+
+    def set_accent(self, accent: str) -> None:
+        self.setStyleSheet(
+            f"QTreeWidget {{ background: {COLORS['panel']}; border: none; border-right: 1px solid {COLORS['border']};"
+            f" padding: 8px 4px; outline: 0; show-decoration-selected: 0; }}"
+            f"QTreeWidget::branch, QTreeWidget::branch:selected, QTreeWidget::branch:hover"
+            f" {{ background: transparent; border: none; }}"
+            f"QTreeWidget::item {{ padding: 5px 6px; border-radius: 6px; }}"
+            f"QTreeWidget::item:hover {{ background: {COLORS['hover']}; }}"
+            f"QTreeWidget::item:selected {{ background: {accent}; color: white; }}")
+        # the Windows 11 style draws its own selection marker in the palette colour -> use the accent there too
+        pal = self.palette()
+        for role in ("Highlight", "Accent"):
+            if hasattr(QPalette.ColorRole, role):
+                pal.setColor(getattr(QPalette.ColorRole, role), QColor(accent))
+        self.setPalette(pal)
 
     def _group(self, title: str) -> QTreeWidgetItem:
         it = QTreeWidgetItem(self, [title.upper()])

@@ -171,6 +171,12 @@ class PlayerBar(QWidget):
                   self.b_repeat, self.b_random):
             b.setEnabled(on)
 
+    def set_accent(self, accent: str, status: dict | None = None) -> None:
+        self.accent = accent
+        self.l_playlist.setStyleSheet(f"color: {accent}; font-weight: 600;")
+        if status is not None:
+            self.update_status(status)
+
     def set_playlist(self, text: str) -> None:
         self.l_playlist.setText(f"Playlist: {text}" if text else "")
         self.l_playlist.setVisible(bool(text))

@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "megaspin"
+version = "0.1.0"
+description = "MegaSpin – modern desktop app for 200-disc RS-232 CD changers (CD-425M)"
+requires-python = ">=3.11"
+dependencies = ["pyserial>=3.5", "PySide6>=6.7", "platformdirs>=3"]
+
+[project.scripts]
+megaspin-cli = "megaspin.cli:main"
+
+[project.gui-scripts]
+megaspin = "megaspin.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

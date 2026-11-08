@@ -5,6 +5,8 @@ MegaSpin replaces the old **Kenwood "CD Changer Controller" (NetNamer)** PC-LINK
 
 > ⚠️ **Beta.** MegaSpin is usable every day, but it is not a stable release yet. Expect rough edges, and please report problems. Your changer's memory is only written when you explicitly ask for it.
 
+> 🔍 **Author's note:** These Kenwood mega CD changers use a **proprietary serial protocol that is not public**. It was reverse-engineered from the original software for interoperability, with the decompiler [Ghidra](https://github.com/NationalSecurityAgency/ghidra), the disassembler [Capstone](https://www.capstone-engine.org/) and AI assistance. The serial monitor [Device Monitoring Studio](https://www.hhdsoftware.com/device-monitoring-studio) was used to monitor, log and analyze the raw serial data and the half-duplex communication between PC and changer. Before it ran on real hardware, MegaSpin was first developed against a **simulator, a digital twin of the changer** built from these captures. Every feature was then verified live on the changer. MegaSpin contains no code, binaries or assets from the original software.
+
 > 🇩🇪 **German only for now.** Unfortunately, the user interface is currently available in German only. An English translation will follow in due course.
 
 <a href="screenshots/megaspin-library.png"><img src="screenshots/megaspin-library.png" alt="MegaSpin – album library"></a>
@@ -16,10 +18,10 @@ MegaSpin replaces the old **Kenwood "CD Changer Controller" (NetNamer)** PC-LINK
 ## Why MegaSpin?
 
 The original PC-LINK software no longer fits modern systems:
-- It was written for Windows 95–XP.
+- It was written for Windows 95–XP with Visual Basic 6.0.
 - It relies on CDDB, an online disc database that shut down years ago.
 - Its cramped 800 × 600 window shows one disc at a time.
-- On long CD-TEXT discs it gives up halfway: it waits only 200 ms between data packets, and the changer sometimes pauses longer.
+- On long CD-TEXT discs it gives up halfway: it waits only 200 ms between data packets, and the changer sometimes pauses longer which leads to timeouts and other annoying bugs
 
 MegaSpin talks to the changer over the same serial link (PC-LINK). It turns your 200 discs into a browsable cover library, much like a music player.
 
@@ -38,10 +40,12 @@ MegaSpin talks to the changer over the same serial link (PC-LINK). It turns your
 </p>
 <p>
 <a href="screenshots/megaspin-edit-album.png"><img src="screenshots/megaspin-edit-album.png" alt="MegaSpin – edit album and write to the changer" width="420"></a>
+<a href="screenshots/megaspin-user_files.png"><img src="screenshots/megaspin-user_files.png" alt="MegaSpin – albums of a user file" width="420"></a>
 </p>
 
-<sub>Left to right: library grouped by artist (cover collage with album count) · album details with track list ·
-editing titles, genre and user files, with a preview of what the changer will store.</sub>
+<sub>Library grouped by artist (cover collage with album count) · album details with track list ·
+editing titles, genre and user files, with a preview of what the changer will store ·
+all albums of a user file ("Grill Party"), ready to play in order or shuffled.</sub>
 
 ---
 

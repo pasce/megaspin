@@ -53,9 +53,7 @@ class FlowLayout(QLayout):
         x, y, line_h = r.x(), r.y(), 0
         for it in self._items:
             w = it.widget()
-            if w is not None and not w.isVisible() and not test:
-                continue
-            if w is not None and w.isHidden():
+            if w is not None and w.isHidden():     # only explicitly hidden widgets are skipped
                 continue
             hint = it.sizeHint()
             if x + hint.width() > r.right() + 1 and line_h > 0:

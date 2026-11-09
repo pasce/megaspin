@@ -97,6 +97,7 @@ class AlbumDetail(QFrame):
 
         btn_box = QWidget()
         btns = FlowLayout(btn_box, spacing=10)      # wraps to a second row when the panel is narrow
+        self.btn_layout = btns
         self.b_full = QPushButton("Vollständig einlesen")
         self.b_full.setToolTip("Disc laden (ohne Wiedergabe) und Inhaltsverzeichnis + CD-TEXT lesen")
         self.b_full.clicked.connect(lambda: self.album and self.readFullRequested.emit(self.album.slot))
@@ -161,6 +162,8 @@ class AlbumDetail(QFrame):
         self.b_meta.setToolTip("Titel und Cover bei MusicBrainz suchen" if album.has_toc
                                else "Erst „Vollständig einlesen“ (Inhaltsverzeichnis nötig)")
         self.b_match.setVisible(album.has_toc and album.mb_status not in (None, "ok", "none"))
+        self.btn_layout.invalidate()                 # re-place the buttons when one is shown/hidden
+        self.btn_layout.activate()
         self.tracks.clear()
         for t in album.tracks:
             it = QTreeWidgetItem([str(t.no), t.title, fmt_time(t.length_s) if t.length_s else ""])

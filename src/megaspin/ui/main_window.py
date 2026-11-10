@@ -276,7 +276,7 @@ class MainWindow(QMainWindow):
         self.detail.readFullRequested.connect(self.read_full)
         self.detail.rereadRequested.connect(self._reread_memory)
         self.detail.closeRequested.connect(self.close_detail)
-        self.detail.metadataRequested.connect(lambda s: self.meta.enqueue(s, force=True))
+        self.detail.metadataRequested.connect(self.request_metadata)
         self.detail.chooseMatchRequested.connect(self.choose_match)
         self.detail.coverRequested.connect(self.change_cover)
         self.detail.editRequested.connect(self.edit_album)
@@ -524,7 +524,7 @@ class MainWindow(QMainWindow):
         m.addAction(tr("Re-read titles (no disc loading)"), lambda: self._reread_memory(slot))
         m.addSeparator()
         album = self.db.album(slot)
-        a_meta = m.addAction(tr("Look up metadata (MusicBrainz)"), lambda: self.meta.enqueue(slot, force=True))
+        a_meta = m.addAction(tr("Look up metadata (MusicBrainz)"), lambda: self.request_metadata(slot))
         a_meta.setEnabled(bool(album and album.has_toc))
         a_match = m.addAction(tr("Choose match …"), lambda: self.choose_match(slot))
         a_match.setEnabled(bool(album and self.db.candidates(slot)))
@@ -532,6 +532,15 @@ class MainWindow(QMainWindow):
         if album and album.cover_path:
             m.addAction(tr("Remove cover"), lambda: self.meta.remove_cover(slot))
         m.exec(pos)
+
+    def request_metadata(self, slot: int) -> None:
+        """Manual 'look up metadata': without this message a click on a disabled search did nothing."""
+        if not self.meta.enabled:
+            self.statusBar().showMessage(
+                tr("MusicBrainz search is turned off – enable it in Settings (⚙)."), 8000)
+            return
+        self.statusBar().showMessage(tr("Looking up metadata for disc {0} …").format(slot), 5000)
+        self.meta.enqueue(slot, force=True)
 
     def choose_match(self, slot: int) -> None:
         album = self.db.album(slot)

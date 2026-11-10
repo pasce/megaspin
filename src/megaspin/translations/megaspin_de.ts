@@ -751,6 +751,10 @@ Ab dem nächsten Track stimmt die Anzeige wieder.</translation>
             <translation>MusicBrainz hat mehrere mögliche Alben gefunden – bitte „Treffer wählen …“.</translation>
         </message>
         <message>
+            <source>MusicBrainz search is turned off – enable it in Settings (⚙).</source>
+            <translation>MusicBrainz-Suche ist ausgeschaltet – in den Einstellungen (⚙) aktivieren.</translation>
+        </message>
+        <message>
             <source>NAK – rejected</source>
             <translation>NAK – abgelehnt</translation>
         </message>

@@ -67,6 +67,26 @@ class SlotInfo:
 StatusListener = Callable[[PlayerStatus, set], None]   # status, changed field names
 
 
+TEXT_STREAM_EMPTY_LIMIT = 25     # frames without any text before a reply counts as an endless stream
+TEXT_STREAM_MAX_FRAMES = 150     # hard cap for any single text reply
+
+
+def _has_text(frame) -> bool:
+    if frame.ftype not in (FrameType.TEXT, FrameType.CDTEXT):
+        return False
+    try:
+        return bool(parse_text(frame.ftype, frame.payload).text)
+    except Exception:
+        return False
+
+
+def _text_stream_give_up(frames) -> bool:
+    """True = stop reading this reply (endless empty stream or unreasonably long answer)."""
+    if len(frames) >= TEXT_STREAM_MAX_FRAMES:
+        return True
+    return len(frames) >= TEXT_STREAM_EMPTY_LIMIT and not any(_has_text(f) for f in frames)
+
+
 class ChangerService:
     """Thread-safe facade. All methods block until the changer answered (use from workers)."""
 
@@ -152,8 +172,9 @@ class ChangerService:
 
     # ------------------------------------------------------------------ helpers
     def _req(self, frame: bytes, label: str, priority: int = 2, timeout: float = 30.0,
-             first: float | None = None) -> list[Frame]:
-        return self.engine.request(frame, priority=priority, first_timeout=first, label=label).result(timeout)
+             first: float | None = None, give_up=None) -> list[Frame]:
+        return self.engine.request(frame, priority=priority, first_timeout=first, label=label,
+                                   give_up=give_up).result(timeout)
 
     def _cmd(self, *sessions, label: str, priority: int = 1, timeout: float = 30.0) -> None:
         self.engine.command(*sessions, priority=priority, label=label).result(timeout)
@@ -215,10 +236,39 @@ class ChangerService:
         return parse_disc_byte(f.payload)[1] if f else 0
 
     def read_texts(self, disc: int) -> list[TextEntry]:
-        """Loaded disc with CD-TEXT -> 0xFD entries; otherwise memory titles (0xFE)."""
-        frames = self._req(C.cmd03(0, Req.TEXT, disc, 0, TextKind.TRACK_TITLE, 0), f"text {disc}")
+        """Loaded disc with CD-TEXT -> 0xFD entries; otherwise memory titles (0xFE).
+
+        Firmware bug (Ken-Changer, live-verified): a CD-TEXT disc without disc title answers the
+        all-tracks request with an endless stream of empty frames. Then we give up on the stream and
+        read the titles one track at a time (P[4] = track number, one reply per track)."""
+        try:
+            frames = self._req(C.cmd03(0, Req.TEXT, disc, 0, TextKind.TRACK_TITLE, 0), f"text {disc}",
+                               give_up=_text_stream_give_up)
+        except ChangerError as e:
+            if e.code != "STREAM_ABORTED":
+                raise
+            log.warning("disc %s: endless text stream, reading tracks one by one", disc)
+            return self.read_texts_per_track(disc)
         return [parse_text(f.ftype, f.payload) for f in frames
                 if f.ftype in (FrameType.TEXT, FrameType.CDTEXT)]
+
+    def read_texts_per_track(self, disc: int, max_tracks: int = 20) -> list[TextEntry]:
+        """Track titles one request per track. Stops at the first track without a reply."""
+        out: list[TextEntry] = []
+        for track in range(1, max_tracks + 1):
+            try:
+                frames = self._req(C.cmd03(0, Req.TEXT, disc, track, TextKind.TRACK_TITLE, 0),
+                                   f"text {disc}/{track}", give_up=_text_stream_give_up)
+            except ChangerError as e:
+                if e.code == "STREAM_ABORTED":
+                    break
+                raise
+            entries = [parse_text(f.ftype, f.payload) for f in frames
+                       if f.ftype in (FrameType.TEXT, FrameType.CDTEXT)]
+            if not entries:
+                break
+            out.extend(entries)
+        return out
 
     def read_slot_list(self) -> list[SlotInfo]:
         """Disc titles of all occupied slots (fast, no mechanics)."""

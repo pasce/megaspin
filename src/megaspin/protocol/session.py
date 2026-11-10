@@ -45,6 +45,7 @@ class Timeouts:
     first_reply: float = 5.0    # request: first answer frame
     inter_reply: float = 3.0    # between answer frames (CD-TEXT pauses up to ~0.4 s)
     unsolicited: float = 3.0    # idle time inside a changer-initiated session
+    abort_drain: float = 20.0   # after giving up a reply: wait for the changer's EOT (repeats ~10 s)
     dedupe: float = 2.5
 
 
@@ -62,6 +63,7 @@ class Job:
     frame: bytes = b""                          # request frame
     first_timeout: float | None = None
     inter_timeout: float | None = None
+    give_up: object = None                      # callable(frames) -> bool: stop reading this reply
     future: Future = field(default_factory=Future)
     label: str = ""
 
@@ -129,9 +131,9 @@ class SessionEngine:
         return self.submit(Job("command", sessions=sess, label=label), priority)
 
     def request(self, frame: bytes, *, priority: int = 2, first_timeout: float | None = None,
-                inter_timeout: float | None = None, label: str = "") -> Future:
+                inter_timeout: float | None = None, label: str = "", give_up=None) -> Future:
         return self.submit(Job("request", frame=frame, first_timeout=first_timeout,
-                               inter_timeout=inter_timeout, label=label), priority)
+                               inter_timeout=inter_timeout, label=label, give_up=give_up), priority)
 
     @property
     def queue_length(self) -> int:
@@ -145,6 +147,19 @@ class SessionEngine:
             self.stats["tx_frames"] += 1
         if self.on_raw:
             self.on_raw("TX", data, time.time())
+
+    def _drain_aborted(self) -> None:
+        """We stopped acknowledging the reply: the changer repeats its last frame and then sends EOT.
+        Frames are deliberately not acknowledged; only the closing EOT is."""
+        end = time.monotonic() + self.t.abort_drain
+        while time.monotonic() < end:
+            m = self._next(max(0.0, end - time.monotonic()))
+            if m is None:
+                break
+            if isinstance(m, Ctrl) and m.byte == EOT:
+                self._ack()
+                return
+        log.warning("aborted reply: no EOT from the changer")
 
     def _ack(self) -> None:
         self._write(bytes([ACK]))
@@ -264,7 +279,7 @@ class SessionEngine:
                 self._open_session()
                 self._send_frame(job.frame)
                 result = self._collect(job.first_timeout or self.t.first_reply,
-                                       job.inter_timeout or self.t.inter_reply)
+                                       job.inter_timeout or self.t.inter_reply, job.give_up)
             self._set_online(True)
             fut.set_result(result)
         except ChangerError as e:
@@ -341,7 +356,7 @@ class SessionEngine:
                     return
         log.warning("EOT not acknowledged")
 
-    def _collect(self, first: float, inter: float) -> list[Frame]:
+    def _collect(self, first: float, inter: float, give_up=None) -> list[Frame]:
         frames: list[Frame] = []
         timeout = first
         while True:
@@ -349,9 +364,13 @@ class SessionEngine:
             if m is None:
                 raise ChangerError("TIMEOUT", f"no reply after {len(frames)} frame(s)")
             if isinstance(m, Frame):
+                frames.append(m)
+                if give_up is not None and give_up(frames):
+                    self.stats["stream_aborted"] = self.stats.get("stream_aborted", 0) + 1
+                    self._drain_aborted()
+                    raise ChangerError("STREAM_ABORTED", f"reply abandoned after {len(frames)} frame(s)")
                 self._ack()
                 self.stats["rx_frames"] += 1
-                frames.append(m)
                 timeout = inter
             elif isinstance(m, BadFrame):
                 self.stats["bad_frames"] += 1

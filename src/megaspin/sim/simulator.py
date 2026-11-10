@@ -78,7 +78,7 @@ def default_discs() -> dict[int, SimDisc]:
                              **{i + 1: t + det for i, t in enumerate(detroit)}}, attr=0x13)
     for disc in d.values():                    # memory mirrors CD-TEXT (changer copies it on load)
         if disc.cdtext:
-            disc.memory_title = disc.cdtext[0][:25]
+            disc.memory_title = (disc.cdtext.get(0) or "")[:25] or None
             disc.memory_tracks = {n: t[:25] for n, t in disc.cdtext.items() if 0 < n <= 20}
     d[149].music_type = 7
     return d
@@ -315,7 +315,7 @@ class ChangerSimulator:
         if b == 0x20:
             return [build_frame(FrameType.PROGRAM, [0])]
         if b == 0x01:
-            return self._texts(disc, b6)
+            return self._texts(disc, b6, b4)
         return []
 
     def _mem_frame(self, disc: int, idx: int, kind: int, text: str | None, attr: int,
@@ -323,7 +323,21 @@ class ChangerSimulator:
         body = text.encode("ascii", "replace")[:25] if text else b"\x01"
         return build_frame(FrameType.TEXT, [disc & 0xFF, disc >> 8, idx, uf, kind, mt, attr] + list(body))
 
-    def _texts(self, disc: int, kind: int) -> list:
+    def _cdtext_frame(self, disc: int, n: int, text: str, attr: int, seq: int = 1) -> bytes:
+        return build_frame(FrameType.CDTEXT, [disc & 0xFF, disc >> 8, n, 0, 1, 0, attr, seq]
+                           + list(text.encode("ascii", "replace")))
+
+    def _endless_empty_stream(self, disc: int, attr: int) -> list:
+        """What the changer sends for a CD-TEXT disc without disc title: 70 empty frames (seq 1..70),
+        ~1.75 s silence, then again, endlessly (live-measured, 15 cycles simulated)."""
+        out: list = []
+        for cycle in range(15):
+            for seq in range(1, 71):
+                fr = build_frame(FrameType.CDTEXT, [disc & 0xFF, disc >> 8, 0, 0, 1, 0, attr, seq, 0x01])
+                out.append((1.75, fr) if (cycle and seq == 1) else fr)
+        return out
+
+    def _texts(self, disc: int, kind: int, track: int = 0) -> list:
         if kind == 7:
             return [self._mem_frame(0, 1 << (n - 1), 7, self.uf_names[n], 0) for n in range(1, 9)]
         if disc == 0:
@@ -333,10 +347,15 @@ class ChangerSimulator:
         if not d:
             return []
         if disc == self.loaded and d.cdtext:
+            if track:                                   # one track (P[4] = track number)
+                if track in d.cdtext:
+                    return [self._cdtext_frame(disc, track, d.cdtext[track], d.attr)]
+                return []
+            if 0 not in d.cdtext:                       # firmware bug: CD-TEXT without disc title
+                return self._endless_empty_stream(disc, d.attr)
             out: list = []
             for n in sorted(d.cdtext):
-                fr = build_frame(FrameType.CDTEXT, [disc & 0xFF, disc >> 8, n, 0, 1, 0, d.attr, 1]
-                                 + list(d.cdtext[n].encode("ascii", "replace")))
+                fr = self._cdtext_frame(disc, n, d.cdtext[n], d.attr)
                 if self.cdtext_pause_after is not None and n == self.cdtext_pause_after + 1:
                     out.append((self.cdtext_pause, fr))
                 else:
@@ -385,7 +404,7 @@ class ChangerSimulator:
             self.loaded = disc
             d = self.discs[disc]
             if d.cdtext:                       # the real changer overwrites memory titles on load
-                d.memory_title = d.cdtext[0][:25]
+                d.memory_title = (d.cdtext.get(0) or "")[:25] or None
                 d.memory_tracks = {n: t[:25] for n, t in d.cdtext.items() if 0 < n <= 20}
             self._outbox.append(build_frame(FrameType.DISC_LOADED, [disc & 0xFF, disc >> 8]))
             if play:

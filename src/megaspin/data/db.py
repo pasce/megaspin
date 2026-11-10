@@ -80,8 +80,8 @@ class Album:
 
     @property
     def complete(self) -> bool:
-        """Everything readable from the changer has been read (TOC; CD-TEXT comes with it)."""
-        return self.has_toc
+        """Incomplete = no table of contents, or no title from any source (design §8.2)."""
+        return self.has_toc and self.title_source != "none"
 
 
 def _first(*vals):

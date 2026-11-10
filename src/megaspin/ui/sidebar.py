@@ -23,7 +23,7 @@ class Sidebar(QTreeWidget):
     def __init__(self, accent: str, parent=None) -> None:
         super().__init__(parent)
         self.setHeaderHidden(True)
-        self.setIndentation(10)
+        self.setIndentation(0)                 # no indent strip: the selection would paint it in accent
         self.setRootIsDecorated(False)
         # neutral style: the Windows 11 style paints an extra selection marker left of the item
         from PySide6.QtWidgets import QStyleFactory

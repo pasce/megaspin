@@ -9,7 +9,7 @@ MegaSpin replaces the old **Kenwood "CD Changer Controller" (NetNamer)** PC-LINK
 
 > 🇩🇪 **German only for now.** Unfortunately, the user interface is currently available in German only. An English translation will follow in due course.
 
-<a href="screenshots/megaspin-library.png"><img src="screenshots/megaspin-library.png" alt="MegaSpin – album library"></a>
+<a href="screenshots/megaspin-library.webp"><img src="screenshots/megaspin-library.webp" alt="MegaSpin – album library"></a>
 
 <sub>Click any screenshot to open it in full size.</sub>
 
@@ -35,12 +35,12 @@ MegaSpin talks to the changer over the same serial link (PC-LINK). It turns your
 **Now: MegaSpin**
 
 <p>
-<a href="screenshots/megaspin-grouped-by-artist.png"><img src="screenshots/megaspin-grouped-by-artist.png" alt="MegaSpin – grouped by artist"></a>
-<a href="screenshots/megaspin-album-details.png"><img src="screenshots/megaspin-album-details.png" alt="MegaSpin – album details"></a>
+<a href="screenshots/megaspin-grouped-by-artist.webp"><img src="screenshots/megaspin-grouped-by-artist.webp" alt="MegaSpin – grouped by artist"></a>
+<a href="screenshots/megaspin-album-details.webp"><img src="screenshots/megaspin-album-details.webp" alt="MegaSpin – album details"></a>
 </p>
 <p>
-<a href="screenshots/megaspin-edit-album.png"><img src="screenshots/megaspin-edit-album.png" alt="MegaSpin – edit album and write to the changer"></a>
-<a href="screenshots/megaspin-user_files.png"><img src="screenshots/megaspin-user_files.png" alt="MegaSpin – albums of a user file"></a>
+<a href="screenshots/megaspin-edit-album.webp"><img src="screenshots/megaspin-edit-album.webp" alt="MegaSpin – edit album and write to the changer"></a>
+<a href="screenshots/megaspin-user_files.webp"><img src="screenshots/megaspin-user_files.webp" alt="MegaSpin – albums of a user file"></a>
 </p>
 
 <sub>Library grouped by artist (cover collage with album count) · album details with track list ·

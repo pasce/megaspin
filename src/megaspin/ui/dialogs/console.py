@@ -1,5 +1,6 @@
 """Protokoll-Konsole (Desktop_App_Design §9.8): live list of all bytes between PC and changer."""
 from __future__ import annotations
+from ...i18n import tr
 
 import time
 from collections import deque
@@ -23,7 +24,7 @@ class ProtocolConsole(QDialog):
 
     def __init__(self, backend, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Protokoll-Konsole")
+        self.setWindowTitle(tr("Protocol console"))
         self.resize(980, 560)
         self.setModal(False)
         self.entries: deque[tuple[float, str, bytes, str, bool]] = deque(maxlen=MAX_ENTRIES)
@@ -33,22 +34,22 @@ class ProtocolConsole(QDialog):
 
         lay = QVBoxLayout(self)
         bar = QHBoxLayout()
-        self.b_pause = QPushButton("Pause")
+        self.b_pause = QPushButton(tr("Pause"))
         self.b_pause.setCheckable(True)
         self.b_pause.toggled.connect(self._toggle_pause)
-        self.b_clear = QPushButton("Leeren")
+        self.b_clear = QPushButton(tr("Clear"))
         self.b_clear.clicked.connect(self.clear)
-        self.cb_ctrl = QCheckBox("ENQ/ACK/EOT ausblenden")
+        self.cb_ctrl = QCheckBox(tr("Hide ENQ/ACK/EOT"))
         self.cb_ctrl.setChecked(True)
         self.cb_ctrl.toggled.connect(self._rebuild)
-        self.cb_status = QCheckBox("nur Statusmeldungen")
-        self.cb_status.setToolTip("Nur die unaufgeforderten Meldungen des Wechslers (0x12–0x15)")
+        self.cb_status = QCheckBox(tr("status messages only"))
+        self.cb_status.setToolTip(tr("Only the unsolicited messages from the changer (0x12–0x15)"))
         self.cb_status.toggled.connect(self._rebuild)
         self.e_filter = QLineEdit()
-        self.e_filter.setPlaceholderText("Filter (Text oder Hex) …")
+        self.e_filter.setPlaceholderText(tr("Filter (text or hex) …"))
         self.e_filter.setClearButtonEnabled(True)
         self.e_filter.textChanged.connect(self._rebuild)
-        self.b_save = QPushButton("Als Datei speichern …")
+        self.b_save = QPushButton(tr("Save to file …"))
         self.b_save.clicked.connect(self.save)
         for w in (self.b_pause, self.b_clear, self.cb_ctrl, self.cb_status):
             bar.addWidget(w)
@@ -58,7 +59,7 @@ class ProtocolConsole(QDialog):
 
         self.tree = QTreeWidget()
         self.tree.setColumnCount(4)
-        self.tree.setHeaderLabels(["Zeit", "", "Bedeutung", "Bytes"])
+        self.tree.setHeaderLabels([tr("Time"), "", tr("Meaning"), tr("Bytes")])
         self.tree.setRootIsDecorated(False)
         self.tree.setIndentation(0)
         self.tree.setUniformRowHeights(True)
@@ -108,7 +109,7 @@ class ProtocolConsole(QDialog):
     def _item(self, e) -> QTreeWidgetItem:
         t, d, raw, text, is_ctrl = e
         ts = datetime.fromtimestamp(t).strftime("%H:%M:%S.%f")[:-3]
-        it = QTreeWidgetItem([ts, "PC → W" if d == "TX" else "W → PC", text, raw.hex(" ").upper()])
+        it = QTreeWidgetItem([ts, tr("PC → changer") if d == "TX" else tr("changer → PC"), text, raw.hex(" ").upper()])
         it.setFont(3, self._mono)
         it.setFont(0, self._mono)
         color = QColor("#7FB7FF") if d == "TX" else QColor("#8CD98C")
@@ -146,9 +147,9 @@ class ProtocolConsole(QDialog):
         self._update_info()
 
     def _update_info(self) -> None:
-        self.l_info.setText(f"{len(self.entries)} Einträge gespeichert (max. {MAX_ENTRIES}), "
-                            f"{self.tree.topLevelItemCount()} angezeigt"
-                            + (" · angehalten" if self.paused else ""))
+        self.l_info.setText(tr("{0} entries saved (max. {1}), {2} shown").format(
+            len(self.entries), MAX_ENTRIES, self.tree.topLevelItemCount())
+                            + (tr(" · stopped") if self.paused else ""))
 
     # ------------------------------------------------------------------ actions
     def showEvent(self, ev) -> None:
@@ -157,7 +158,7 @@ class ProtocolConsole(QDialog):
 
     def _toggle_pause(self, on: bool) -> None:
         self.paused = on
-        self.b_pause.setText("Weiter" if on else "Pause")
+        self.b_pause.setText(tr("Resume") if on else tr("Pause"))
         if not on:
             self._rebuild()
         self._update_info()
@@ -177,7 +178,7 @@ class ProtocolConsole(QDialog):
 
     def save(self) -> None:
         name = datetime.now().strftime("megaspin-protokoll-%Y%m%d-%H%M%S.txt")
-        path, _ = QFileDialog.getSaveFileName(self, "Protokoll speichern", name, "Textdateien (*.txt)")
+        path, _ = QFileDialog.getSaveFileName(self, tr("Save protocol"), name, tr("Text files (*.txt)"))
         if path:
             with open(path, "w", encoding="utf-8") as f:
                 f.write(self.text_dump())

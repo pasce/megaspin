@@ -10,6 +10,7 @@ from pathlib import Path
 from PySide6.QtCore import QObject, Signal
 
 from ..data.db import Database
+from ..i18n import tr
 from ..metadata import musicbrainz as mb
 from ..metadata.matcher import rank
 
@@ -119,7 +120,7 @@ class MetadataService(QObject):
                     cb(ranked)
             except Exception as e:
                 log.warning("metadata job %s failed: %s", job[:2], e)
-                self.statusText.emit(f"Metadaten: Fehler ({e.__class__.__name__}) – später erneut")
+                self.statusText.emit(tr("Metadata: error ({0}) – try again later").format(e.__class__.__name__))
             finally:
                 if job[0] == "lookup":
                     self._pending.discard(job[1])
@@ -134,7 +135,7 @@ class MetadataService(QObject):
             return
         album = self.db.album(slot)
         known_tracks = {t.no: t.title for t in album.tracks if t.source in ("cdtext", "memory", "user")}
-        self.statusText.emit(f"Metadaten für Disc {slot} suchen …")
+        self.statusText.emit(tr("Looking up metadata for disc {0} …").format(slot))
         cands = mb.lookup_toc(toc.musicbrainz_toc(), toc.track_count, self.contact)
         ranked, status = rank(cands, toc.lengths(), album.artist, album.album, known_tracks)
         self.db.save_candidates(slot, ranked)
@@ -145,9 +146,9 @@ class MetadataService(QObject):
             self.discUpdated.emit(slot)
             if status == "ambiguous":
                 self.ambiguous.emit(slot)
-        self.statusText.emit({"ok": f"Disc {slot}: Metadaten gefunden",
-                              "ambiguous": f"Disc {slot}: mehrere Treffer – bitte auswählen",
-                              "none": f"Disc {slot}: kein Treffer bei MusicBrainz"}[status])
+        self.statusText.emit({"ok": tr("Disc {0}: metadata found").format(slot),
+                              "ambiguous": tr("Disc {0}: several matches – please choose").format(slot),
+                              "none": tr("Disc {0}: no match at MusicBrainz").format(slot)}[status])
 
     def _apply(self, slot: int, cand, status: str) -> None:
         self.db.save_musicbrainz(slot, cand, status)

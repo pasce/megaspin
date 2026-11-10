@@ -1,5 +1,6 @@
 """Local library database (SQLite), Desktop_App_Design §5."""
 from __future__ import annotations
+from ..i18n import tr
 
 import json
 import re
@@ -71,11 +72,11 @@ class Album:
 
     @property
     def display_album(self) -> str:
-        return self.album or f"Disc {self.slot}"
+        return self.album or tr("Disc {0}").format(self.slot)
 
     @property
     def display_artist(self) -> str:
-        return self.artist or ("Unbekannter Interpret" if self.album else "")
+        return self.artist or (tr("Unknown artist") if self.album else "")
 
     @property
     def complete(self) -> bool:

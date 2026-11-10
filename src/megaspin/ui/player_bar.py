@@ -1,5 +1,6 @@
 """Player bar at the bottom (Desktop_App_Design §8.6)."""
 from __future__ import annotations
+from ..i18n import tr
 
 import time
 
@@ -11,8 +12,8 @@ from .icons import icon
 from .theme import COLORS
 
 PLAY_STATE_TEXT = {
-    "stopped": "Gestoppt", "stopping": "Stoppt…", "searching": "Suche…", "playing": "Wiedergabe",
-    "paused": "Pause", "ff": "Vorlauf", "rew": "Rücklauf", "unknown": "–",
+    "stopped": tr("Stopped"), "stopping": tr("Stopping…"), "searching": tr("Searching…"), "playing": tr("Playing"),
+    "paused": tr("Pause"), "ff": tr("Fast forward"), "rew": tr("Rewind"), "unknown": "–",
 }
 
 
@@ -93,13 +94,13 @@ class PlayerBar(QWidget):
             b.setCursor(Qt.CursorShape.PointingHandCursor)
             return b
 
-        self.b_prev = btn("prev", "Vorheriger Track (Strg+←)")
-        self.b_play = btn("play", "Play/Pause (Leertaste)", 24)
+        self.b_prev = btn("prev", tr("Previous track (Ctrl+←)"))
+        self.b_play = btn("play", tr("Play/Pause (space)"), 24)
         self.b_play.setObjectName("PlayButton")
-        self.b_next = btn("next", "Nächster Track (Strg+→)")
-        self.b_stop = btn("stop", "Stop (Strg+.)")
-        self.b_rew = btn("rew", "Rücklauf – gedrückt halten")
-        self.b_ff = btn("ff", "Vorlauf – gedrückt halten")
+        self.b_next = btn("next", tr("Next track (Ctrl+→)"))
+        self.b_stop = btn("stop", tr("Stop (Ctrl+.)"))
+        self.b_rew = btn("rew", tr("Rewind – hold"))
+        self.b_ff = btn("ff", tr("Fast forward – hold"))
         for b in (self.b_prev, self.b_play, self.b_next, self.b_stop):
             lay.addWidget(b)
         lay.addSpacing(10)
@@ -109,7 +110,7 @@ class PlayerBar(QWidget):
 
         info = QVBoxLayout()
         info.setSpacing(2)
-        self.l_title = QLabel("Nicht verbunden")
+        self.l_title = QLabel(tr("Not connected"))
         self.l_title.setObjectName("Title")
         self.l_sub = QLabel("")
         self.l_sub.setObjectName("Subtitle")
@@ -127,7 +128,7 @@ class PlayerBar(QWidget):
         self.progress.setTextVisible(False)
         self.progress.setFixedHeight(4)
         self.progress.setRange(0, 1000)
-        self.progress.setToolTip("Geschätzte Position (der Wechsler meldet keine Spielzeit)")
+        self.progress.setToolTip(tr("Estimated position (the changer does not report playing time)"))
         self.l_time = QLabel("–:–– / –:––")
         self.l_time.setObjectName("Subtitle")
         self.l_time.setAlignment(Qt.AlignmentFlag.AlignRight)
@@ -142,8 +143,8 @@ class PlayerBar(QWidget):
         lay.addWidget(w, 3)
         lay.addSpacing(18)
 
-        self.b_repeat = btn("repeat", "Repeat (Strg+R)", 20)
-        self.b_random = btn("shuffle", "Random: aus → 1 Disc → alle (Strg+S)", 20)
+        self.b_repeat = btn("repeat", tr("Repeat (Ctrl+R)"), 20)
+        self.b_random = btn("shuffle", tr("Random: off → 1 disc → all (Ctrl+S)"), 20)
         self.l_random = QLabel("")
         self.l_random.setObjectName("Subtitle")
         lay.addWidget(self.b_repeat)
@@ -178,7 +179,7 @@ class PlayerBar(QWidget):
             self.update_status(status)
 
     def set_playlist(self, text: str) -> None:
-        self.l_playlist.setText(f"Playlist: {text}" if text else "")
+        self.l_playlist.setText(tr("Playlist: {0}").format(text) if text else "")
         self.l_playlist.setVisible(bool(text))
 
     def set_now_playing(self, title: str, subtitle: str, track_length: int | None) -> None:
@@ -196,7 +197,7 @@ class PlayerBar(QWidget):
         self.b_repeat.setIcon(icon("repeat", self.accent if st.get("repeat") else on))
         rnd = st.get("random", "off")
         self.b_random.setIcon(icon("shuffle", self.accent if rnd != "off" else on))
-        self.l_random.setText({"one": "1 Disc", "all": "Alle"}.get(rnd, ""))
+        self.l_random.setText({"one": tr("1 disc"), "all": tr("All")}.get(rnd, ""))
         self._tick()
 
     @property
@@ -209,9 +210,8 @@ class PlayerBar(QWidget):
         rough = pos is not None and self.est.spooled
         self.l_time.setText(("≈ " if rough else "") + f"{fmt_time(pos)} / {fmt_time(length)}")
         self.l_time.setToolTip(
-            "Nach dem Spulen ungenau: Der Wechsler meldet keine Spielposition.\n"
-            "Ab dem nächsten Track stimmt die Anzeige wieder." if rough else
-            "Geschätzt aus Start und Pausen (der Wechsler meldet keine Spielposition).")
+            tr("Imprecise after spooling: the changer does not report a playing position.\nThe display is correct again from the next track.") if rough else
+            tr("Estimated from start and pauses (the changer does not report playing time)."))
         if pos is not None and length:
             self.progress.setValue(int(min(1.0, pos / length) * 1000))
         else:

@@ -1,5 +1,6 @@
 """Album grid: model, delegate, view and A–Z bar (Desktop_App_Design §8.3)."""
 from __future__ import annotations
+from ..i18n import tr
 
 import hashlib
 import unicodedata
@@ -21,16 +22,16 @@ AlbumRole = Qt.ItemDataRole.UserRole + 1
 GroupRole = Qt.ItemDataRole.UserRole + 3
 
 SORTS = {
-    "artist": ("Interpret", lambda a: (artist_key(a.artist) or "~", _norm(a.album or ""), a.slot)),
-    "album": ("Album", lambda a: (_norm(a.album or "~"), a.slot)),
-    "year": ("Jahr", lambda a: (a.year is None, a.year or 0, artist_key(a.artist) or "~", a.slot)),
-    "slot": ("Slot-Nummer", lambda a: a.slot),
-    "played": ("Zuletzt gespielt", lambda a: -(a.last_played_at or 0)),
+    "artist": (tr("Artist"), lambda a: (artist_key(a.artist) or "~", _norm(a.album or ""), a.slot)),
+    "album": (tr("Album"), lambda a: (_norm(a.album or "~"), a.slot)),
+    "year": (tr("Year"), lambda a: (a.year is None, a.year or 0, artist_key(a.artist) or "~", a.slot)),
+    "slot": (tr("Slot number"), lambda a: a.slot),
+    "played": (tr("Last played"), lambda a: -(a.last_played_at or 0)),
 }
 
 
-GROUPINGS = {"none": "Nicht gruppieren", "artist": "Nach Interpret", "year": "Nach Jahr"}
-UNKNOWN_YEAR = "Unbekannt"
+GROUPINGS = {"none": tr("Do not group"), "artist": tr("By artist"), "year": tr("By year")}
+UNKNOWN_YEAR = tr("Unknown")
 
 
 @dataclass
@@ -43,11 +44,11 @@ class Group:
     @property
     def subtitle(self) -> str:
         n = len(self.albums)
-        s = f"{n} Album" if n == 1 else f"{n} Alben"
+        s = tr("{0} album").format(n) if n == 1 else tr("{0} albums").format(n)
         if self.kind == "year":
             artists = {artist_key(a.artist) for a in self.albums if a.artist}
             if len(artists) > 1:
-                s += f" · {len(artists)} Interpreten"
+                s += tr(" · {0} artists").format(len(artists))
             elif artists:
                 s += " · " + best_variant([a.artist for a in self.albums if a.artist])
         return s
@@ -64,7 +65,7 @@ def build_groups(albums: list[Album], kind: str) -> list[Group]:
     for g in groups.values():
         if kind == "artist":
             names = [a.artist for a in g.albums if a.artist]
-            g.title = best_variant(names) if names else "Unbekannter Interpret"
+            g.title = best_variant(names) if names else tr("Unknown artist")
         else:
             g.title = str(g.key)
     if kind == "artist":
@@ -114,21 +115,21 @@ class LibraryModel(QAbstractListModel):
             if role == Qt.ItemDataRole.DisplayRole:
                 return a.title
             if role == Qt.ItemDataRole.ToolTipRole:
-                return f"<b>{a.title}</b><br>{a.subtitle}<br>Klicken zum Öffnen"
+                return tr("<b>{0}</b><br>{1}<br>Click to open").format(a.title, a.subtitle)
             return None
         if role == AlbumRole:
             return a
         if role == Qt.ItemDataRole.DisplayRole:
             return a.display_album
         if role == Qt.ItemDataRole.ToolTipRole:
-            parts = [f"<b>{a.display_album}</b>", a.display_artist, f"Disc #{a.slot}"]
+            parts = [f"<b>{a.display_album}</b>", a.display_artist, tr("Disc #{0}").format(a.slot)]
             if a.music_type:
                 parts.append(music_type_name(a.music_type))
             if a.track_count:
-                parts.append(f"{a.track_count} Tracks")
-            src = {"cdtext": "CD-TEXT", "memory": "Wechsler-Speicher", "user": "eigene Angaben",
-                   "musicbrainz": "MusicBrainz", "none": "keine Titel"}[a.title_source]
-            parts.append(f"Quelle: {src}")
+                parts.append(tr("{0} tracks").format(a.track_count))
+            src = {"cdtext": "CD-TEXT", "memory": tr("changer memory"), "user": tr("own entries"),
+                   "musicbrainz": "MusicBrainz", "none": tr("no titles")}[a.title_source]
+            parts.append(tr("Source: {0}").format(src))
             return "<br>".join(p for p in parts if p)
         return None
 
@@ -422,7 +423,7 @@ class AlbumDelegate(QStyledItemDelegate):
         p.drawText(tx2, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
                    p.fontMetrics().elidedText(a.display_artist, Qt.TextElideMode.ElideRight, tx2.width()))
         tx3 = tx2.translated(0, 17)
-        extra = f"#{a.slot}" + (f" · {a.track_count} Tracks" if a.track_count else "")
+        extra = f"#{a.slot}" + (tr(" · {0} tracks").format(a.track_count) if a.track_count else "")
         p.drawText(tx3, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, extra)
         p.restore()
 

@@ -1,5 +1,6 @@
 """Main window (Desktop_App_Design §7): sidebar | album grid | now playing, player bar, status bar."""
 from __future__ import annotations
+from ..i18n import tr
 
 from pathlib import Path
 
@@ -34,8 +35,8 @@ from .sidebar import Sidebar
 from .playlist_view import PlaylistView
 from .theme import COLORS
 
-MODE_TEXT = {"track": "Track Mode", "program": "Program Mode", "best_sel": "Best Selection",
-             "music_type": "Music Type Mode", "user_file": "User File Mode"}
+MODE_TEXT = {"track": tr("Track mode"), "program": tr("Program mode"), "best_sel": "Best Selection",
+             "music_type": tr("Music type mode"), "user_file": tr("User file mode")}
 OLD_DATA_DIR = Path(r"C:\Program Files (x86)\CD Changer Controller\data")
 ACTIVE_STATES = ("playing", "paused", "ff", "rew", "searching")
 
@@ -168,7 +169,7 @@ class MainWindow(QMainWindow):
         self.scan.finished.connect(lambda *_: self.meta.enqueue_missing())
         self.scan.discRead.connect(self._on_disc_read)
         self.scan.discSwapped.connect(lambda s: self.statusBar().showMessage(
-            f"Disc {s}: andere CD als bisher erkannt – alte Daten verworfen, wird neu erkannt", 10000))
+            tr("Disc {0}: different CD than before recognised – old data discarded, will be re-read").format(s), 10000))
         self.slot_watch = SlotWatcher(self.backend, self.db, self.scan, self)
         self.slot_watch.changed.connect(self._on_changer_changed)
         self.meta.discUpdated.connect(lambda _slot: self._reload_timer.start())
@@ -183,7 +184,7 @@ class MainWindow(QMainWindow):
                 combo.setCurrentIndex(i)
         self.model.sort, self.model.group_by = self.sort.currentData(), self.group.currentData()
         self.reload_library()
-        self._on_connection(False, "nicht verbunden")
+        self._on_connection(False, tr("not connected"))
 
     # ------------------------------------------------------------------ layout
     def _build_header(self) -> QWidget:
@@ -201,36 +202,36 @@ class MainWindow(QMainWindow):
         lay.addWidget(name)
         lay.addSpacing(30)
         self.search = QLineEdit()
-        self.search.setPlaceholderText("Suchen: Interpret, Album oder #Slot …")
+        self.search.setPlaceholderText(tr("Search: artist, album or #slot …"))
         self.search.setClearButtonEnabled(True)
         self.search.setFixedWidth(340)
         lay.addWidget(self.search)
         lay.addStretch()
         self.b_rescan = QToolButton()
         self.b_rescan.setIcon(icon("refresh"))
-        self.b_rescan.setToolTip("Discs einlesen …")
+        self.b_rescan.setToolTip(tr("Read discs …"))
         self.b_rescan.clicked.connect(self.open_scan_dialog)
         lay.addWidget(self.b_rescan)
         self.conn_btn = QToolButton()
         self.conn_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.conn_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.conn_btn.setToolTip("Verbindung einstellen (Strg+K)")
+        self.conn_btn.setToolTip(tr("Connection settings (Ctrl+K)"))
         self.conn_btn.clicked.connect(self.open_connect_dialog)
         lay.addWidget(self.conn_btn)
         self.b_menu = QToolButton()
         self.b_menu.setIcon(icon("menu"))
-        self.b_menu.setToolTip("Menü")
+        self.b_menu.setToolTip(tr("Menu"))
         self.b_menu.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         menu = QMenu(self.b_menu)
-        menu.addAction("User Files bearbeiten …", self.edit_user_files)
-        menu.addAction("Daten aus dem alten Programm importieren …", self.import_old_data)
+        menu.addAction(tr("Edit user files …"), self.edit_user_files)
+        menu.addAction(tr("Import data from the old program …"), self.import_old_data)
         menu.addSeparator()
-        menu.addAction(icon("settings"), "Einstellungen … (Strg+,)", self.open_settings)
-        menu.addAction("Protokoll-Konsole … (F12)", self.open_console)
+        menu.addAction(icon("settings"), tr("Settings … (Ctrl+,)"), self.open_settings)
+        menu.addAction(tr("Protocol console … (F12)"), self.open_console)
         self.b_menu.setMenu(menu)
         self.b_settings = QToolButton()
         self.b_settings.setIcon(icon("settings"))
-        self.b_settings.setToolTip("Einstellungen (Strg+,)")
+        self.b_settings.setToolTip(tr("Settings (Ctrl+,)"))
         self.b_settings.clicked.connect(self.open_settings)
         lay.addWidget(self.b_settings)
         lay.addWidget(self.b_menu)
@@ -244,22 +245,22 @@ class MainWindow(QMainWindow):
         top = QHBoxLayout()
         self.b_back = QToolButton()
         self.b_back.setText("←")
-        self.b_back.setToolTip("Zurück zur Übersicht (Esc)")
+        self.b_back.setToolTip(tr("Back to overview (Esc)"))
         self.b_back.clicked.connect(self.leave_group)
         self.b_back.hide()
         top.addWidget(self.b_back)
-        self.l_count = QLabel("Alben")
+        self.l_count = QLabel(tr("Albums"))
         self.l_count.setObjectName("Title")
         top.addWidget(self.l_count)
         top.addStretch()
-        top.addWidget(QLabel("Sortieren:"))
+        top.addWidget(QLabel(tr("Sort:")))
         self.sort = QComboBox()
         for key, (label, _) in SORTS.items():
             self.sort.addItem(label, key)
         self.sort.currentIndexChanged.connect(self._on_sort)
         top.addWidget(self.sort)
         top.addSpacing(12)
-        top.addWidget(QLabel("Gruppieren:"))
+        top.addWidget(QLabel(tr("Group:")))
         self.group = QComboBox()
         for key, label in GROUPINGS.items():
             self.group.addItem(label, key)
@@ -301,7 +302,7 @@ class MainWindow(QMainWindow):
         lay = QVBoxLayout(w)
         lay.setContentsMargins(16, 16, 16, 12)
         lay.setSpacing(6)
-        head = QLabel("JETZT LÄUFT")
+        head = QLabel(tr("NOW PLAYING"))
         head.setObjectName("Subtitle")
         lay.addWidget(head)
         self.np_cover = QLabel()
@@ -343,19 +344,19 @@ class MainWindow(QMainWindow):
         sl = QHBoxLayout(sel)
         sl.setContentsMargins(0, 6, 0, 0)
         sl.setSpacing(6)
-        lab = QLabel("Direktwahl")
+        lab = QLabel(tr("Direct selection"))
         lab.setObjectName("Subtitle")
         sl.addWidget(lab)
         sl.addStretch()
-        self.sp_disc = NumberField("Disc", 1, 200)
-        self.sp_track = NumberField("Track", 1, 99)
+        self.sp_disc = NumberField(tr("Disc"), 1, 200)
+        self.sp_track = NumberField(tr("Track"), 1, 99)
         sl.addWidget(self.sp_disc)
         sl.addWidget(self.sp_track)
         self.sp_disc.returnPressed.connect(lambda: self.b_playsel.click())
         self.sp_track.returnPressed.connect(lambda: self.b_playsel.click())
         self.b_playsel = QToolButton()
         self.b_playsel.setIcon(icon("play", self.settings.accent, 20))
-        self.b_playsel.setToolTip("Direktwahl abspielen")
+        self.b_playsel.setToolTip(tr("Play direct selection"))
         self.b_playsel.clicked.connect(lambda: self.play_album(self.sp_disc.value(), self.sp_track.value()))
         sl.addWidget(self.b_playsel)
         self.b_loadsel = self.b_playsel
@@ -425,21 +426,22 @@ class MainWindow(QMainWindow):
         self.b_back.setVisible(m.open_group is not None)
         self.az.setVisible(not (m.showing_groups and m.group_by == "year"))
         if not total:
-            self.l_count.setText("Alben – bitte verbinden, dann erscheinen die Discs im Wechsler"
-                                 if self.db.disc_count() else "Alben – noch nicht eingelesen")
+            self.l_count.setText(tr("Albums – connect to see the discs in the changer")
+                                 if self.db.disc_count() else tr("Albums – not read yet"))
             return
         if m.showing_groups:
-            what = {"artist": "Interpreten", "year": "Jahre"}[m.group_by]
+            what = {"artist": tr("Artists"), "year": tr("Years")}[m.group_by]
             n = len(m.visible_albums())
-            self.l_count.setText(f"{what} ({len(m.groups)})"
-                                 + ("" if n == total else f" · {n} von {total} Alben"))
+            self.l_count.setText(tr("{0} ({1})").format(what, len(m.groups))
+                                 + ("" if n == total else tr(" · {0} of {1} albums").format(n, total)))
             return
         g = m.current_group()
         n = len(m.items)
         if g is not None:
-            self.l_count.setText(f"{g.title} ({n})")
+            self.l_count.setText(tr("{0} ({1})").format(g.title, n))
             return
-        self.l_count.setText(f"Alben ({n})" if n == total else f"Alben ({n} von {total})")
+        self.l_count.setText(tr("Albums ({0})").format(n) if n == total
+                              else tr("Albums ({0} of {1})").format(n, total))
 
     def _on_sort(self, _i: int = 0) -> None:
         self.settings.sort = self.sort.currentData()
@@ -480,11 +482,11 @@ class MainWindow(QMainWindow):
 
     def _group_menu(self, g, pos) -> None:
         m = QMenu(self)
-        m.addAction("Öffnen", lambda: self.enter_group(g.key))
+        m.addAction(tr("Open"), lambda: self.enter_group(g.key))
         entries = [(a.slot, 0) for a in g.albums]
-        m.addAction(icon("play"), "Alle abspielen",
+        m.addAction(icon("play"), tr("Play all"),
                     lambda: self._start_group_entries(g.title, entries, False))
-        m.addAction(icon("shuffle"), "Zufällig abspielen",
+        m.addAction(icon("shuffle"), tr("Shuffle play"),
                     lambda: self._start_group_entries(g.title, entries, True))
         self._add_to_playlist_menu(m, entries)
         m.exec(pos)
@@ -512,23 +514,23 @@ class MainWindow(QMainWindow):
 
     def _album_menu(self, slot: int, pos) -> None:
         m = QMenu(self)
-        m.addAction(icon("play"), "Abspielen", lambda: self.play_album(slot))
-        m.addAction("Nur laden", lambda: self.backend.load(slot))
-        m.addAction("Details anzeigen", lambda: self.open_detail(slot))
+        m.addAction(icon("play"), tr("Play"), lambda: self.play_album(slot))
+        m.addAction(tr("Load only"), lambda: self.backend.load(slot))
+        m.addAction(tr("Show details"), lambda: self.open_detail(slot))
         m.addAction(icon("edit"), "Bearbeiten … (F2)", lambda: self.edit_album(slot))
         self._add_to_playlist_menu(m, [(slot, 0)])
         m.addSeparator()
-        m.addAction(icon("refresh"), "Vollständig einlesen (F5)", lambda: self.read_full(slot))
-        m.addAction("Titel neu einlesen (ohne Mechanik)", lambda: self._reread_memory(slot))
+        m.addAction(icon("refresh"), tr("Full read (F5)"), lambda: self.read_full(slot))
+        m.addAction(tr("Re-read titles (no disc loading)"), lambda: self._reread_memory(slot))
         m.addSeparator()
         album = self.db.album(slot)
-        a_meta = m.addAction("Metadaten suchen (MusicBrainz)", lambda: self.meta.enqueue(slot, force=True))
+        a_meta = m.addAction(tr("Look up metadata (MusicBrainz)"), lambda: self.meta.enqueue(slot, force=True))
         a_meta.setEnabled(bool(album and album.has_toc))
-        a_match = m.addAction("Treffer wählen …", lambda: self.choose_match(slot))
+        a_match = m.addAction(tr("Choose match …"), lambda: self.choose_match(slot))
         a_match.setEnabled(bool(album and self.db.candidates(slot)))
-        m.addAction("Cover ändern …", lambda: self.change_cover(slot))
+        m.addAction(tr("Change cover …"), lambda: self.change_cover(slot))
         if album and album.cover_path:
-            m.addAction("Cover entfernen", lambda: self.meta.remove_cover(slot))
+            m.addAction(tr("Remove cover"), lambda: self.meta.remove_cover(slot))
         m.exec(pos)
 
     def choose_match(self, slot: int) -> None:
@@ -582,11 +584,11 @@ class MainWindow(QMainWindow):
         if self.playlist.active:
             self.playlist.stop("user")
         if not self.playlist.start(name, entries, shuffle=shuffle, start_index=start):
-            self.statusBar().showMessage("Nichts abzuspielen (keine der Discs ist im Wechsler).", 6000)
+            self.statusBar().showMessage(tr("Nothing to play (none of the discs is in the changer)."), 6000)
 
     def play_playlist(self, pid: int, start: int = 0, shuffle: bool = False) -> None:
         self._playing_pid = pid
-        self._start_playlist(self.db.playlist_name(pid) or "Playlist", self.db.playlist_items(pid),
+        self._start_playlist(self.db.playlist_name(pid) or tr("Playlist"), self.db.playlist_items(pid),
                              shuffle, start)
 
     def play_group(self, kind: str, value, shuffle: bool) -> None:
@@ -603,7 +605,7 @@ class MainWindow(QMainWindow):
             albums = [a for a in albums if artist_key(a.artist) == value]
             name = albums[0].display_artist if albums else ""
         else:
-            name = "Alle Alben"
+            name = tr("All albums")
         self._playing_pid = None
         self._start_playlist(name, [(a.slot, 0) for a in albums], shuffle)
 
@@ -616,8 +618,8 @@ class MainWindow(QMainWindow):
     def _on_playlist_finished(self, reason: str) -> None:
         self.player.set_playlist("")
         self.pl_view.mark_playing(-1)
-        text = {"end": "Playlist zu Ende", "user": "Playlist beendet (andere Auswahl)",
-                "stopped": "Playlist gestoppt"}.get(reason, "Playlist beendet")
+        text = {"end": tr("Playlist finished"), "user": tr("Playlist ended (other selection)"),
+                "stopped": tr("Playlist stopped")}.get(reason, tr("Playlist ended"))
         self.statusBar().showMessage(text, 5000)
 
     def show_playlist(self, pid: int) -> None:
@@ -628,7 +630,7 @@ class MainWindow(QMainWindow):
         self._on_playlist_changed()
 
     def new_playlist(self, items=None) -> int | None:
-        name, ok = QInputDialog.getText(self, "Neue Playlist", "Name:")
+        name, ok = QInputDialog.getText(self, tr("New playlist"), tr("Name:"))
         if not ok or not name.strip():
             return None
         pid = self.db.create_playlist(name.strip())
@@ -640,7 +642,7 @@ class MainWindow(QMainWindow):
         return pid
 
     def rename_playlist(self, pid: int) -> None:
-        name, ok = QInputDialog.getText(self, "Playlist umbenennen", "Name:",
+        name, ok = QInputDialog.getText(self, tr("Rename playlist"), tr("Name:"),
                                         text=self.db.playlist_name(pid) or "")
         if ok and name.strip():
             self.db.rename_playlist(pid, name.strip())
@@ -649,7 +651,7 @@ class MainWindow(QMainWindow):
 
     def delete_playlist(self, pid: int) -> None:
         name = self.db.playlist_name(pid)
-        if QMessageBox.question(self, "Playlist löschen", f"Playlist „{name}“ löschen?") \
+        if QMessageBox.question(self, tr("Delete playlist"), tr("Delete playlist „{0}“?").format(name)) \
                 != QMessageBox.StandardButton.Yes:
             return
         if self.playlist.active and getattr(self, "_playing_pid", None) == pid:
@@ -661,35 +663,35 @@ class MainWindow(QMainWindow):
         self.reload_library()
 
     def _add_to_playlist_menu(self, menu: QMenu, items: list[tuple[int, int]]) -> None:
-        sub = menu.addMenu("Zu Playlist hinzufügen")
+        sub = menu.addMenu(tr("Add to playlist"))
         for pid, name, _n in self.db.playlists():
             sub.addAction(name, lambda p=pid, n=name: self._add_items(p, n, items))
         if self.db.playlists():
             sub.addSeparator()
-        sub.addAction("Neue Playlist …", lambda: self.new_playlist(items))
+        sub.addAction(tr("New playlist …"), lambda: self.new_playlist(items))
 
     def _add_items(self, pid: int, name: str, items) -> None:
         self.db.add_playlist_items(pid, items)
         self.reload_library()
-        self.statusBar().showMessage(f"Zu „{name}“ hinzugefügt", 4000)
+        self.statusBar().showMessage(tr("Added to „{0}“").format(name), 4000)
 
     def _track_menu(self, slot: int, track: int, pos) -> None:
         m = QMenu(self)
-        m.addAction(icon("play"), "Abspielen", lambda: self.play_album(slot, track))
+        m.addAction(icon("play"), tr("Play"), lambda: self.play_album(slot, track))
         self._add_to_playlist_menu(m, [(slot, track)])
         m.exec(pos)
 
     def _sidebar_menu(self, kind: str, value, pos) -> None:
         m = QMenu(self)
         if kind in ("genre", "userfile", "artist", "all"):
-            m.addAction(icon("play"), "Alle abspielen", lambda: self.play_group(kind, value, False))
-            m.addAction(icon("shuffle"), "Zufällig abspielen", lambda: self.play_group(kind, value, True))
+            m.addAction(icon("play"), tr("Play all"), lambda: self.play_group(kind, value, False))
+            m.addAction(icon("shuffle"), tr("Shuffle play"), lambda: self.play_group(kind, value, True))
         elif kind == "playlist":
-            m.addAction(icon("play"), "Abspielen", lambda: self.play_playlist(value))
-            m.addAction(icon("shuffle"), "Zufällig abspielen", lambda: self.play_playlist(value, 0, True))
+            m.addAction(icon("play"), tr("Play"), lambda: self.play_playlist(value))
+            m.addAction(icon("shuffle"), tr("Shuffle play"), lambda: self.play_playlist(value, 0, True))
             m.addSeparator()
-            m.addAction("Umbenennen …", lambda: self.rename_playlist(value))
-            m.addAction("Löschen", lambda: self.delete_playlist(value))
+            m.addAction(tr("Rename …"), lambda: self.rename_playlist(value))
+            m.addAction(tr("Delete"), lambda: self.delete_playlist(value))
         else:
             return
         m.exec(pos)
@@ -727,12 +729,12 @@ class MainWindow(QMainWindow):
 
     def _on_changer_changed(self) -> None:
         if self.backend.connected and not self.scan.busy:
-            self.statusBar().showMessage("Discs im Wechsler haben sich geändert – neue Discs werden eingelesen …",
+            self.statusBar().showMessage(tr("Discs in the changer have changed – reading new discs …"),
                                          6000)
             self.scan.quick(only_new=True)
 
     def write_titles_to_changer(self, slot: int, payload: dict) -> None:
-        self.statusBar().showMessage(f"Disc {slot}: Titel werden in den Wechsler geschrieben …")
+        self.statusBar().showMessage(tr("Disc {0}: writing titles to the changer …").format(slot))
 
         def work(svc):
             svc.write_titles(slot, payload["title"], payload["tracks"], payload["music_type"],
@@ -743,10 +745,10 @@ class MainWindow(QMainWindow):
 
         def done(ok, res):
             if ok:
-                self.statusBar().showMessage(f"Disc {slot}: in den Wechsler geschrieben"
-                                             + ("" if res else " – Kontrolle abweichend, bitte prüfen"), 8000)
+                self.statusBar().showMessage(tr("Disc {0}: written to the changer").format(slot)
+                                             + ("" if res else tr(" – check differs, please verify")), 8000)
             else:
-                self.statusBar().showMessage(f"Disc {slot}: Schreiben fehlgeschlagen ({res})", 10000)
+                self.statusBar().showMessage(tr("Disc {0}: writing failed ({1})").format(slot, res), 10000)
             self.reload_library()
         self.backend.call(work, done)
 
@@ -760,15 +762,15 @@ class MainWindow(QMainWindow):
         self.db.set_user_file_names(names)
         self.reload_library()
         if dlg.write_to_changer:
-            self.statusBar().showMessage("User-File-Namen werden in den Wechsler geschrieben …")
+            self.statusBar().showMessage(tr("Writing user file names to the changer …"))
 
             def work(svc):
                 svc.write_user_file_names({n: v for n, v in names.items() if v})
                 self.db.save_user_file_names(svc.read_user_file_names())
 
             def done(ok, res):
-                self.statusBar().showMessage("User-File-Namen in den Wechsler geschrieben" if ok
-                                             else f"Schreiben fehlgeschlagen ({res})", 8000)
+                self.statusBar().showMessage(tr("User file names written to the changer") if ok
+                                             else tr("Writing failed ({0})").format(res), 8000)
                 self.reload_library()
             self.backend.call(work, done)
 
@@ -782,11 +784,14 @@ class MainWindow(QMainWindow):
             self.apply_accent(self.settings.accent)
         if changed.get("mb_enabled"):
             self.meta.enqueue_missing()
+        if "language" in changed:
+            QMessageBox.information(self, tr("Language"),
+                                    tr("Please restart MegaSpin to use the new language."))
         if "port" in changed and self.settings.port:
-            if QMessageBox.question(self, "Verbindung", f"Jetzt mit {self.settings.port} verbinden?") \
+            if QMessageBox.question(self, tr("Connection"), tr("Connect to {0} now?").format(self.settings.port)) \
                     == QMessageBox.StandardButton.Yes:
                 self.connect_to(self.settings.port)
-        self.statusBar().showMessage("Einstellungen gespeichert", 4000)
+        self.statusBar().showMessage(tr("Settings saved"), 4000)
 
     def apply_accent(self, accent: str) -> None:
         """New accent colour without restart: stylesheet plus all widgets that paint it themselves."""
@@ -813,25 +818,25 @@ class MainWindow(QMainWindow):
 
     def import_old_data(self) -> None:
         start = str(OLD_DATA_DIR) if OLD_DATA_DIR.exists() else ""
-        folder = QFileDialog.getExistingDirectory(self, "Datenordner des alten Programms wählen", start)
+        folder = QFileDialog.getExistingDirectory(self, tr("Choose data folder of the old program"), start)
         if not folder:
             return
         try:
             res = import_folder(folder, self.db)
         except Exception as e:
-            QMessageBox.warning(self, "Import", f"Import fehlgeschlagen:\n{e}")
+            QMessageBox.warning(self, tr("Import"), tr("Import failed:\n{0}").format(e))
             return
         self.reload_library()
         self.meta.enqueue_missing()
         QMessageBox.information(
-            self, "Import abgeschlossen",
-            f"Inhaltsverzeichnisse: {res.tocs}\nDiscs mit eigenen Titeln: {res.titles}\n"
-            f"User-File-Namen: {res.user_files}\n\n"
-            "Discs, die nicht im Wechsler sind, erscheinen erst, wenn sie eingelegt und eingelesen werden.")
+            self, tr("Import finished"),
+            tr("Tables of contents: {0}\nDiscs with own titles: {1}\nUser file names: {2}\n\n"
+               "Discs that are not in the changer will appear once they are loaded and read.").format(
+                res.tocs, res.titles, res.user_files))
 
     def change_cover(self, slot: int) -> None:
         path, _ = QFileDialog.getOpenFileName(self, f"Cover für Disc {slot} wählen", "",
-                                              "Bilder (*.jpg *.jpeg *.png)")
+                                              tr("Images (*.jpg *.jpeg *.png)"))
         if path:
             self.meta.set_cover_file(slot, path)
 
@@ -866,14 +871,14 @@ class MainWindow(QMainWindow):
             self._on_error("NOT_CONNECTED", "")
             return
         if self.status.get("play_state") in ("playing", "paused", "ff", "rew") and                 self.status.get("loaded_disc") != slot:
-            r = QMessageBox.question(self, "Disc einlesen",
-                                     f"Zum Einlesen muss Disc {slot} geladen werden. "
-                                     "Die laufende Wiedergabe wird dabei beendet. Fortfahren?")
+            r = QMessageBox.question(self, tr("Read disc"),
+                                     tr("To read the disc, disc {0} must be loaded. ").format(slot)
+                                     + tr("Playback will be stopped in the process. Continue?"))
             if r != QMessageBox.StandardButton.Yes:
                 return
             self.backend.key("stop")
         if self.scan.running:
-            self.statusBar().showMessage(f"Disc {slot} wird nach dem laufenden Einlesen gelesen.", 5000)
+            self.statusBar().showMessage(tr("Disc {0} will be read after the current reading.").format(slot), 5000)
         self.scan.full([slot])
 
     def open_scan_dialog(self) -> None:
@@ -897,7 +902,7 @@ class MainWindow(QMainWindow):
             return
         if self.scan.mode == "full":
             self.scan.cancel()
-            self.statusBar().showMessage("Einlesen wird nach der aktuellen Disc abgebrochen.", 5000)
+            self.statusBar().showMessage(tr("Reading will be stopped after the current disc."), 5000)
         if self.playlist.active:
             self.playlist.stop("user")
         self.backend.play(slot, track)
@@ -918,7 +923,7 @@ class MainWindow(QMainWindow):
     def _on_scan_finished(self, ok: bool, text: str) -> None:
         self.sb_prog.hide()
         self.sb_scan.setText("")
-        self.statusBar().showMessage(("Einlesen: " + text) if ok else f"Einlesen fehlgeschlagen: {text}", 6000)
+        self.statusBar().showMessage((tr("Reading: ") + text) if ok else tr("Reading failed: {0}").format(text), 6000)
 
     # ------------------------------------------------------------------ connection
     def auto_connect(self) -> None:
@@ -936,17 +941,16 @@ class MainWindow(QMainWindow):
             self.connect_to(dlg.selected)
 
     def connect_to(self, target: str) -> None:
-        label = "Simulator" if target == SIM_TARGET else target
-        self._set_conn_indicator("warn", f"Verbinde mit {label} …")
+        label = tr("Simulator") if target == SIM_TARGET else target
+        self._set_conn_indicator("warn", tr("Connecting to {0} …").format(label))
 
         def done(ok, res):
             if ok:
                 self.scan.quick(only_new=self.db.slot_count() > 0)
             else:
-                QMessageBox.warning(self, "Verbindung fehlgeschlagen",
-                                    f"Keine Verbindung zum Wechsler über {label}.\n\n{res}\n\n"
-                                    "Bitte Kabel, Schnittstelle und Wechsler prüfen. "
-                                    "Läuft noch ein anderes Programm auf dieser Schnittstelle?")
+                QMessageBox.warning(self, tr("Connection failed"),
+                                    tr("No connection to the changer via {0}.\n\n{1}\n\n").format(label, res)
+                                    + tr("Please check cable, port and changer. Is another program still using this port?"))
         self.backend.connect_to(target, done)
 
     def _set_conn_indicator(self, level: str, text: str) -> None:
@@ -958,23 +962,23 @@ class MainWindow(QMainWindow):
 
     def _on_connection(self, online: bool, text: str) -> None:
         if online:
-            self._set_conn_indicator("ok", f"Verbunden: {text}")
+            self._set_conn_indicator("ok", tr("Connected: {0}").format(text))
             self.slot_watch.start()
         else:
-            self._set_conn_indicator("err" if self.backend.svc is None else "warn", text or "Nicht verbunden")
+            self._set_conn_indicator("err" if self.backend.svc is None else "warn", text or tr("Not connected"))
         self.player.set_enabled(online)
         self.b_playsel.setEnabled(online)
         self.b_loadsel.setEnabled(online)
         self.b_rescan.setEnabled(online)
         if not online:
-            self.player.set_now_playing("Nicht verbunden", "", None)
+            self.player.set_now_playing(tr("Not connected"), "", None)
             self.slot_watch.stop()
 
     def _on_error(self, code: str, msg: str) -> None:
-        texts = {"BUSY": "Wechsler beschäftigt – bitte erneut versuchen",
-                 "NOT_RESPONDING": "Wechsler antwortet nicht",
-                 "NOT_CONNECTED": "Keine Verbindung zum Wechsler"}
-        self.statusBar().showMessage(texts.get(code, f"Fehler: {msg}"), 6000)
+        texts = {"BUSY": tr("Changer busy – please try again"),
+                 "NOT_RESPONDING": tr("Changer is not responding"),
+                 "NOT_CONNECTED": tr("No connection to the changer")}
+        self.statusBar().showMessage(texts.get(code, tr("Error: {0}").format(msg)), 6000)
 
     # ------------------------------------------------------------------ status
     def _on_status(self, st: dict, changed: list) -> None:
@@ -1002,15 +1006,15 @@ class MainWindow(QMainWindow):
         self._np_album = album
         tracks = {t.no: t for t in album.tracks} if album else {}
         t = tracks.get(track)
-        track_title = t.title if t else (f"Track {track}" if track else "–")
+        track_title = t.title if t else (tr("Track {0}").format(track) if track else "–")
         artist = album.display_artist if album else ""
-        title = album.display_album if album else (f"Disc {disc}" if disc else "")
+        title = album.display_album if album else (tr("Disc {0}").format(disc) if disc else "")
         state = PLAY_STATE_TEXT.get(st.get("play_state", "unknown"), "")
 
         self.np_cover.setPixmap(cover_pixmap(album, 240))
         self.np_title.setText(track_title)
         self.np_artist.setText(" – ".join(x for x in (artist, title) if x))
-        extra = [f"Disc {disc}", f"Track {track}", state]
+        extra = [tr("Disc {0}").format(disc), tr("Track {0}").format(track), state]
         if st.get("disc_music_type"):
             extra.append(music_type_name(st["disc_music_type"]))
         self.np_info.setText(" · ".join(x for x in extra if x))
@@ -1020,9 +1024,9 @@ class MainWindow(QMainWindow):
             it.setForeground(1, QColor(self.settings.accent if on else COLORS["text"]))
         self.player.set_now_playing(track_title, " – ".join(x for x in (artist, title) if x),
                                     t.length_s if t else None)
-        self.sb_state.setText(f"{state} · Disc {disc} · Track {track}" if disc else state)
-        rnd = {"one": " · Random 1 Disc", "all": " · Random alle"}.get(st.get("random", "off"), "")
-        rep = " · Repeat" if st.get("repeat") else ""
+        self.sb_state.setText(tr("{0} · Disc {1} · Track {2}").format(state, disc, track) if disc else state)
+        rnd = {"one": tr(" · random 1 disc"), "all": tr(" · random all")}.get(st.get("random", "off"), "")
+        rep = tr(" · repeat") if st.get("repeat") else ""
         self.sb_mode.setText(MODE_TEXT.get(st.get("mode", "track"), "") + rnd + rep)
         if disc and not self.sp_disc.hasFocus():
             self.sp_disc.setValue(disc)

@@ -1,5 +1,6 @@
 """Album bearbeiten (Desktop_App_Design §9.3)."""
 from __future__ import annotations
+from ...i18n import tr
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QIntValidator
@@ -15,7 +16,7 @@ from ...protocol.parsers import split_artist_album
 from ..theme import COLORS
 
 MAX_CHANGER_TRACKS = 20
-SRC = {"user": "eigene", "musicbrainz": "MusicBrainz", "cdtext": "CD-TEXT", "memory": "Wechsler", "none": "–"}
+SRC = {"user": "eigene", "musicbrainz": "MusicBrainz", "cdtext": "CD-TEXT", "memory": tr("Changer"), "none": "–"}
 
 
 def _first(*vals):
@@ -38,7 +39,7 @@ class EditAlbumDialog(QDialog):
     def __init__(self, album: Album, sources: dict, uf_names: dict[int, str], can_write: bool,
                  parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setWindowTitle(f"Album bearbeiten – Disc #{album.slot}")
+        self.setWindowTitle(tr("Edit album – disc #{0}").format(album.slot))
         self.resize(820, 640)
         self.album = album
         d = sources.get("disc", {})
@@ -64,15 +65,15 @@ class EditAlbumDialog(QDialog):
         self.c_genre = QComboBox()
         self.c_genre.addItems(MUSIC_TYPE_NAMES)
         self.c_genre.setCurrentIndex(music_type_index(album.music_type))
-        form.addWidget(QLabel("Interpret"), 0, 0)
+        form.addWidget(QLabel(tr("Artist")), 0, 0)
         form.addWidget(self.e_artist, 0, 1)
-        form.addWidget(QLabel("Jahr"), 0, 2)
+        form.addWidget(QLabel(tr("Year")), 0, 2)
         form.addWidget(self.e_year, 0, 3)
-        form.addWidget(QLabel("Album"), 1, 0)
+        form.addWidget(QLabel(tr("Album")), 1, 0)
         form.addWidget(self.e_album, 1, 1, 1, 3)
-        form.addWidget(QLabel("Genre"), 2, 0)
+        form.addWidget(QLabel(tr("Genre")), 2, 0)
         form.addWidget(self.c_genre, 2, 1)
-        form.addWidget(QLabel("User Files"), 3, 0, Qt.AlignmentFlag.AlignTop)
+        form.addWidget(QLabel(tr("User files")), 3, 0, Qt.AlignmentFlag.AlignTop)
         ufw = QGridLayout()
         self.uf_boxes: list[QCheckBox] = []
         for n in range(1, 9):
@@ -90,7 +91,7 @@ class EditAlbumDialog(QDialog):
 
         n = max(album.track_count or 0, len(album.tracks), max(self._trk, default=0))
         self.table = QTableWidget(n, 4)
-        self.table.setHorizontalHeaderLabels(["Nr", "Titel", "Im Wechsler (25 Z.)", "Quelle"])
+        self.table.setHorizontalHeaderLabels([tr("No."), tr("Title"), tr("In changer (25 chars)"), tr("Source")])
         self.table.verticalHeader().hide()
         h = self.table.horizontalHeader()
         h.setSectionResizeMode(self.COL_NO, QHeaderView.ResizeMode.ResizeToContents)
@@ -112,24 +113,24 @@ class EditAlbumDialog(QDialog):
         root.addWidget(self.table, 1)
 
         btns = QHBoxLayout()
-        self.b_mb = QPushButton("Aus MusicBrainz übernehmen")
+        self.b_mb = QPushButton(tr("Take from MusicBrainz"))
         self.b_mb.clicked.connect(lambda: self._take("mb"))
         self.b_mb.setEnabled(bool(self._mb[1] or any(r.get("mb_title") for r in self._trk.values())))
-        self.b_cd = QPushButton("Aus CD-TEXT übernehmen")
+        self.b_cd = QPushButton(tr("Take from CD-TEXT"))
         self.b_cd.clicked.connect(lambda: self._take("cdtext"))
         self.b_cd.setEnabled(bool(self._cd[1] or any(r.get("cdtext_title") for r in self._trk.values())))
-        self.b_reset = QPushButton("Zurücksetzen")
-        self.b_reset.setToolTip("Eigene Angaben verwerfen (MusicBrainz / CD-TEXT / Wechsler-Titel gelten wieder)")
+        self.b_reset = QPushButton(tr("Reset"))
+        self.b_reset.setToolTip(tr("Discard own entries (MusicBrainz / CD-TEXT / changer titles apply again)"))
         self.b_reset.clicked.connect(self._reset)
         for b in (self.b_mb, self.b_cd, self.b_reset):
             btns.addWidget(b)
         btns.addStretch()
         root.addLayout(btns)
 
-        self.cb_write = QCheckBox("Auch in den Wechsler schreiben")
+        self.cb_write = QCheckBox(tr("Also write to the changer"))
         self.cb_write.setEnabled(can_write)
         if not can_write:
-            self.cb_write.setToolTip("Nur möglich, wenn der Wechsler verbunden und die Disc eingelegt ist")
+            self.cb_write.setToolTip(tr("Only possible if the changer is connected and the disc is loaded"))
         root.addWidget(self.cb_write)
         self.warn = QLabel()
         self.warn.setWordWrap(True)
@@ -139,8 +140,8 @@ class EditAlbumDialog(QDialog):
         self._update_warn()
 
         bb = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
-        bb.button(QDialogButtonBox.StandardButton.Save).setText("Speichern")
-        bb.button(QDialogButtonBox.StandardButton.Cancel).setText("Abbrechen")
+        bb.button(QDialogButtonBox.StandardButton.Save).setText(tr("Save"))
+        bb.button(QDialogButtonBox.StandardButton.Cancel).setText(tr("Cancel"))
         bb.accepted.connect(self.accept)
         bb.rejected.connect(self.reject)
         root.addWidget(bb)
@@ -187,11 +188,11 @@ class EditAlbumDialog(QDialog):
     def _update_preview(self) -> None:
         self._loading = True
         disc = to_changer_text(changer_disc_title(self.e_artist.text().strip(), self.e_album.text().strip()))
-        self.l_disc_changer.setText(f"Disc-Titel im Wechsler: „{disc.decode()}“")
+        self.l_disc_changer.setText(tr("Disc title in changer: „{0}“").format(disc.decode()))
         for row in range(self.table.rowCount()):
             it = self.table.item(row, self.COL_CHANGER)
             if row >= MAX_CHANGER_TRACKS:
-                it.setText("(nicht möglich – max. 20)")
+                it.setText(tr("(not possible – max. 20)"))
             else:
                 it.setText(to_changer_text(self._title(row)).decode())
         self._loading = False
@@ -200,12 +201,10 @@ class EditAlbumDialog(QDialog):
         msgs = []
         if self.cb_write.isChecked():
             if self.album.has_cdtext:
-                msgs.append("⚠ Diese Disc hat CD-TEXT: Der Wechsler ersetzt eigene Titel beim nächsten Laden "
-                            "durch den CD-TEXT. Genre und User Files bleiben erhalten.")
+                msgs.append(tr("⚠ This disc has CD-TEXT: the changer replaces your own titles with the CD-TEXT when it is loaded next time. Genre and user files are kept."))
             if self.table.rowCount() > MAX_CHANGER_TRACKS:
-                msgs.append(f"Der Wechsler speichert nur die Titel der ersten {MAX_CHANGER_TRACKS} Tracks.")
-            msgs.append("Titel werden auf 25 Zeichen gekürzt, Umlaute umschrieben (Vorschau in der Spalte "
-                        "„Im Wechsler“).")
+                msgs.append(tr("The changer only stores the titles of the first {0} tracks.").format(MAX_CHANGER_TRACKS))
+            msgs.append(tr("Titles are cut to 25 characters, umlauts are transliterated (preview in the column „In changer“)."))
         self.warn.setText("\n".join(msgs))
         self.warn.setVisible(bool(msgs))
 

@@ -36,6 +36,7 @@ class Settings:
     mb_contact: str = ""             # optional contact for the MusicBrainz User-Agent
     sort: str = "artist"
     group_by: str = "none"
+    language: str = "auto"          # "auto" (system language), "en", "de"
     extra: dict = field(default_factory=dict)
 
     @classmethod

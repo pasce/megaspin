@@ -1,5 +1,6 @@
 """Choose a MusicBrainz match (Desktop_App_Design §9.4)."""
 from __future__ import annotations
+from ...i18n import tr
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (QDialog, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QListWidget,
@@ -13,7 +14,7 @@ class MatchSelectDialog(QDialog):
 
     def __init__(self, slot: int, album, candidates: list, meta, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle(f"Metadaten wählen – Disc #{slot}")
+        self.setWindowTitle(tr("Choose metadata – disc #{0}").format(slot))
         self.resize(900, 560)
         self.slot, self.meta, self.album = slot, meta, album
         self.cands = list(candidates)
@@ -21,19 +22,19 @@ class MatchSelectDialog(QDialog):
         self.none_fits = False
 
         lay = QVBoxLayout(self)
-        t = QLabel(f"Welches Album liegt in Slot {slot}?")
+        t = QLabel(tr("Which album is in slot {0}?").format(slot))
         t.setObjectName("Title")
         lay.addWidget(t)
-        known = " – ".join(x for x in (album.artist, album.album) if x) or "unbekannt"
-        info = QLabel(f"Bekannt: {known} · {album.track_count or '?'} Tracks"
+        known = " – ".join(x for x in (album.artist, album.album) if x) or tr("unknown")
+        info = QLabel(tr("Known: {0} · {1} tracks").format(known, album.track_count or '?')
                       + (f" · {fmt_time(album.duration_s)}" if album.duration_s else ""))
         info.setObjectName("Subtitle")
         lay.addWidget(info)
 
         srow = QHBoxLayout()
         self.q = QLineEdit(" ".join(x for x in (album.artist, album.album) if x))
-        self.q.setPlaceholderText("Manuell suchen: Interpret und Album")
-        b_search = QPushButton("Suchen")
+        self.q.setPlaceholderText(tr("Search manually: artist and album"))
+        b_search = QPushButton(tr("Search"))
         b_search.clicked.connect(self._search)
         self.q.returnPressed.connect(self._search)
         srow.addWidget(self.q, 1)
@@ -42,7 +43,7 @@ class MatchSelectDialog(QDialog):
 
         split = QSplitter(Qt.Orientation.Horizontal)
         self.tree = QTreeWidget()
-        self.tree.setHeaderLabels(["Score", "Interpret", "Album", "Jahr", "Land", "Label", "CD", "Ø Abw."])
+        self.tree.setHeaderLabels(["Score", tr("Artist"), tr("Album"), tr("Year"), tr("Country"), "Label", "CD", tr("Ø dev.")])
         self.tree.setRootIsDecorated(False)
         self.tree.header().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         self.tree.currentItemChanged.connect(self._preview)
@@ -57,12 +58,12 @@ class MatchSelectDialog(QDialog):
         lay.addWidget(self.status)
 
         row = QHBoxLayout()
-        b_none = QPushButton("Keiner passt")
-        b_none.setToolTip("Keine MusicBrainz-Daten verwenden (CD-TEXT/Speichertitel bleiben)")
+        b_none = QPushButton(tr("None fits"))
+        b_none.setToolTip(tr("Do not use MusicBrainz data (CD-TEXT/memory titles stay)"))
         b_none.clicked.connect(self._none)
-        b_cancel = QPushButton("Abbrechen")
+        b_cancel = QPushButton(tr("Cancel"))
         b_cancel.clicked.connect(self.reject)
-        self.b_ok = QPushButton("Übernehmen")
+        self.b_ok = QPushButton(tr("Apply"))
         self.b_ok.setObjectName("Primary")
         self.b_ok.clicked.connect(self._take)
         row.addWidget(b_none)
@@ -87,7 +88,8 @@ class MatchSelectDialog(QDialog):
             self.tree.resizeColumnToContents(col)
         if self.cands:
             self.tree.setCurrentItem(self.tree.topLevelItem(0))
-        self.status.setText(f"{len(self.cands)} Treffer" if self.cands else "Keine Treffer – manuell suchen?")
+        self.status.setText(tr("{0} matches").format(len(self.cands)) if self.cands
+                            else tr("No matches – search manually?"))
         self.b_ok.setEnabled(bool(self.cands))
 
     def _preview(self, it, _prev=None) -> None:
@@ -102,7 +104,7 @@ class MatchSelectDialog(QDialog):
         text = self.q.text().strip()
         if not text:
             return
-        self.status.setText("Suche bei MusicBrainz …")
+        self.status.setText(tr("Searching MusicBrainz …"))
         self.meta.search(self.slot, text, lambda res: self._results.emit(res))
 
     def _on_results(self, res: list) -> None:

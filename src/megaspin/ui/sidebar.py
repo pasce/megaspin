@@ -1,5 +1,6 @@
 """Left sidebar: library filters, artists, genres, user files (Desktop_App_Design §8.2)."""
 from __future__ import annotations
+from ..i18n import tr
 
 from collections import Counter
 
@@ -73,33 +74,33 @@ class Sidebar(QTreeWidget):
     def populate(self, albums: list[Album], uf_names: dict[int, str],
                  playlists: list[tuple[int, str, int]] = ()) -> None:
         self.clear()
-        g = self._group("Bibliothek")
-        self._entry(g, "Alle Alben", len(albums), "all")
+        g = self._group(tr("Library"))
+        self._entry(g, tr("All albums"), len(albums), "all")
         inc = sum(1 for a in albums if not a.complete)
         if inc:
-            self._entry(g, "Unvollständig", inc, "incomplete")
+            self._entry(g, tr("Incomplete"), inc, "incomplete")
         groups: dict[str, list[str]] = {}
         for a in albums:
             if a.artist:
                 groups.setdefault(artist_key(a.artist), []).append(a.artist)
         if groups:
-            g = self._group("Interpreten")
+            g = self._group(tr("Artists"))
             named = sorted(((best_variant(v), k, len(v)) for k, v in groups.items()), key=lambda x: x[1])
             for name, key, n in named:
                 self._entry(g, name, n, "artist", key)
         genres = Counter(a.music_type for a in albums if a.music_type)
         if genres:
-            g = self._group("Genres")
+            g = self._group(tr("Genres"))
             for code in sorted(genres, key=music_type_name):
                 self._entry(g, music_type_name(code), genres[code], "genre", code)
-        g = self._group("User Files")
+        g = self._group(tr("User files"))
         for n in range(1, 9):
             cnt = sum(1 for a in albums if a.user_files & (1 << (n - 1)))
             self._entry(g, uf_names.get(n, f"User File {n}"), cnt, "userfile", n)
-        g = self._group("Playlists")
+        g = self._group(tr("Playlists"))
         for pid, name, cnt in playlists:
             self._entry(g, name, cnt, "playlist", pid)
-        new = self._entry(g, "+ Neue Playlist", None, "newplaylist")
+        new = self._entry(g, tr("+ New playlist"), None, "newplaylist")
         new.setForeground(0, QColor(COLORS["text2"]))
         self.expandAll()
 

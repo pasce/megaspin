@@ -25,20 +25,25 @@ def main() -> int:
     except Exception:
         pass
 
-    from PySide6.QtCore import QTimer
+    from PySide6.QtCore import QTimer, Qt
     from PySide6.QtWidgets import QApplication
 
     from .app.settings import Settings
-    from .backend.serial_backend import SIM_TARGET
-    from .ui.main_window import MainWindow
-    from .ui.theme import stylesheet
 
     app = QApplication(sys.argv)
-    from PySide6.QtCore import Qt
     app.setEffectEnabled(Qt.UIEffect.UI_AnimateCombo, False)     # no flicker when combo boxes open
     app.setApplicationName("MegaSpin")
     app.setOrganizationName("megaspin")
     settings = Settings.load()
+    # The language must be active before any UI module is imported: some module-level texts
+    # are translated when the module is loaded.
+    from . import i18n
+    i18n.apply(app, settings.language)
+
+    from .backend.serial_backend import SIM_TARGET
+    from .ui.main_window import MainWindow
+    from .ui.theme import stylesheet
+
     app.setStyleSheet(stylesheet(settings.accent))
     win = MainWindow(settings)
     win.show()

@@ -1,5 +1,6 @@
 """Library scanning (Desktop_App_Design §9.5 / §10.1)."""
 from __future__ import annotations
+from ..i18n import tr
 
 import logging
 import threading
@@ -16,12 +17,12 @@ log = logging.getLogger(__name__)
 def quick_scan(svc: ChangerService, db: Database, *, only_new: bool = False, slots: list[int] | None = None,
                progress=lambda done, total, text: None, cancel: threading.Event | None = None) -> int:
     """Slot list + memory titles, music type and user files. No mechanics."""
-    progress(0, 0, "Belegte Slots lesen …")
+    progress(0, 0, tr("Reading occupied slots …"))
     present = svc.read_slot_list()
     if not present:
         # the changer answers with an empty list while it is busy (door open, disc detection);
         # an empty changer is practically impossible -> never mark the whole library as absent
-        raise ChangerError("EMPTY_SLOT_LIST", "Wechsler beschäftigt – Slotliste leer, bitte später erneut")
+        raise ChangerError("EMPTY_SLOT_LIST", tr("Changer busy – slot list empty, please try again later"))
     new = db.set_present_slots({s.disc: (s.title, s.attr) for s in present})
     try:
         db.save_user_file_names(svc.read_user_file_names())
@@ -32,10 +33,10 @@ def quick_scan(svc: ChangerService, db: Database, *, only_new: bool = False, slo
     for i, slot in enumerate(todo):
         if cancel and cancel.is_set():
             break
-        progress(i, len(todo), f"Disc {slot} lesen …")
+        progress(i, len(todo), tr("Reading disc {0} …").format(slot))
         texts, mt, uf = svc.read_memory(slot)
         db.save_memory(slot, texts, mt, uf)
-    progress(len(todo), len(todo), "Fertig")
+    progress(len(todo), len(todo), tr("Done"))
     return len(todo)
 
 
@@ -54,28 +55,29 @@ def full_scan(svc: ChangerService, db: Database, slots: list[int], *,
     done, failed = 0, []
     for i, slot in enumerate(slots):
         if cancel and cancel.is_set():
-            log_line("Abgebrochen.")
+            log_line(tr("Cancelled."))
             break
-        progress(i, len(slots), f"Disc {slot} …")
+        progress(i, len(slots), tr("Disc {0} …").format(slot))
         try:
-            r = svc.read_disc_full(slot, progress=lambda m, s=slot, i=i: progress(i, len(slots), f"Disc {s}: {m}"))
+            r = svc.read_disc_full(slot, progress=lambda m, s=slot, i=i: progress(i, len(slots), tr("Disc {0}: {1}").format(s, m)))
             swapped = store_disc_read(db, r)
             done += 1
-            src = {"cdtext": "CD-TEXT", "memory": "Wechsler-Speicher"}.get(r.text_source, "keine Titel")
-            log_line(f"Disc {slot}: {r.toc.track_count if r.toc else '?'} Tracks, Titel aus {src}"
-                     + (" – andere CD als bisher, alte Daten verworfen" if swapped else ""))
+            src = {"cdtext": "CD-TEXT", "memory": tr("changer memory")}.get(r.text_source, tr("no titles"))
+            log_line(tr("Disc {0}: {1} tracks, titles from {2}").format(
+                         slot, r.toc.track_count if r.toc else "?", src)
+                     + (tr(" – different CD than before, old data discarded") if swapped else ""))
             disc_done(slot)
         except ChangerError as e:
             failed.append(slot)
-            log_line(f"Disc {slot}: Fehler ({e.code})")
+            log_line(tr("Disc {0}: error ({1})").format(slot, e.code))
             log.warning("full scan disc %s failed: %s", slot, e)
     if previous and svc.status.loaded_disc != previous and not (cancel and cancel.is_set()):
-        progress(len(slots), len(slots), f"Disc {previous} wieder laden …")
+        progress(len(slots), len(slots), tr("Reloading disc {0} …").format(previous))
         try:
             svc.load(previous)
         except ChangerError:
             pass
-    progress(len(slots), len(slots), "Fertig")
+    progress(len(slots), len(slots), tr("Done"))
     return done, failed
 
 
@@ -144,7 +146,7 @@ class ScanManager(QObject):
             "quick",
             lambda svc: quick_scan(svc, self.db, only_new=only_new, slots=slots, cancel=self._cancel,
                                    progress=lambda d, t, s: self.progress.emit(d, t, s)),
-            lambda n: f"{n} Disc(s) schnell eingelesen")
+            lambda n: tr("{0} disc(s) read quickly").format(n))
 
     def full(self, slots: list[int], fresh: bool = False, keep_user: bool = True) -> bool:
         """fresh=True ('Alles neu'): forget stored TOC/CD-TEXT/MusicBrainz/cover first."""
@@ -160,7 +162,7 @@ class ScanManager(QObject):
 
         def summary(res):
             n, failed = res
-            return f"{n} Disc(s) vollständig eingelesen" + (f", Fehler bei {failed}" if failed else "")
+            return tr("{0} disc(s) fully read").format(n) + (tr(", errors for {0}").format(failed) if failed else "")
         return self._start("full", work, summary)
 
     def cancel(self) -> None:

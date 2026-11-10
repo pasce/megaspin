@@ -1,5 +1,6 @@
 """Album detail panel (Desktop_App_Design §8.4), shown below the grid."""
 from __future__ import annotations
+from ..i18n import tr
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
@@ -13,8 +14,8 @@ from .icons import icon
 from .player_bar import fmt_time
 from .theme import COLORS
 
-SOURCE_TEXT = {"cdtext": "CD-TEXT", "memory": "Wechsler-Speicher (25 Zeichen)", "user": "eigene Angaben",
-               "musicbrainz": "MusicBrainz", "none": "keine Titel"}
+SOURCE_TEXT = {"cdtext": "CD-TEXT", "memory": tr("Changer memory (25 characters)"), "user": tr("own entries"),
+               "musicbrainz": "MusicBrainz", "none": tr("no titles")}
 
 
 class AlbumDetail(QFrame):
@@ -60,11 +61,11 @@ class AlbumDetail(QFrame):
         self.b_play = QToolButton()
         self.b_play.setObjectName("PlayButton")
         self.b_play.setIcon(icon("play", "#FFFFFF", 22))
-        self.b_play.setToolTip("Album abspielen")
+        self.b_play.setToolTip(tr("Play album"))
         self.b_play.clicked.connect(lambda: self.album and self.playRequested.emit(self.album.slot, 1))
         b_close = QToolButton()
         b_close.setText("✕")
-        b_close.setToolTip("Schließen (Esc)")
+        b_close.setToolTip(tr("Close (Esc)"))
         b_close.clicked.connect(self.closeRequested.emit)
         head.addWidget(self.b_play, 0, Qt.AlignmentFlag.AlignTop)
         head.addWidget(b_close, 0, Qt.AlignmentFlag.AlignTop)
@@ -98,22 +99,22 @@ class AlbumDetail(QFrame):
         btn_box = QWidget()
         btns = FlowLayout(btn_box, spacing=10)      # wraps to a second row when the panel is narrow
         self.btn_layout = btns
-        self.b_full = QPushButton("Vollständig einlesen")
-        self.b_full.setToolTip("Disc laden (ohne Wiedergabe) und Inhaltsverzeichnis + CD-TEXT lesen")
+        self.b_full = QPushButton(tr("Full read"))
+        self.b_full.setToolTip(tr("Load the disc (without playback) and read table of contents and CD-TEXT"))
         self.b_full.clicked.connect(lambda: self.album and self.readFullRequested.emit(self.album.slot))
-        self.b_reread = QPushButton("Titel neu einlesen")
-        self.b_reread.setToolTip("Speichertitel, Genre und User Files neu lesen (ohne Mechanik)")
+        self.b_reread = QPushButton(tr("Re-read titles"))
+        self.b_reread.setToolTip(tr("Re-read memory titles, genre and user files (no disc loading)"))
         self.b_reread.clicked.connect(lambda: self.album and self.rereadRequested.emit(self.album.slot))
-        self.b_meta = QPushButton("Metadaten suchen")
-        self.b_meta.setToolTip("Titel und Cover bei MusicBrainz suchen")
+        self.b_meta = QPushButton(tr("Look up metadata"))
+        self.b_meta.setToolTip(tr("Look up titles and cover at MusicBrainz"))
         self.b_meta.clicked.connect(lambda: self.album and self.metadataRequested.emit(self.album.slot))
-        self.b_match = QPushButton("Treffer wählen …")
+        self.b_match = QPushButton(tr("Choose match …"))
         self.b_match.clicked.connect(lambda: self.album and self.chooseMatchRequested.emit(self.album.slot))
-        self.b_cover = QPushButton("Cover ändern …")
+        self.b_cover = QPushButton(tr("Change cover …"))
         self.b_cover.clicked.connect(lambda: self.album and self.coverRequested.emit(self.album.slot))
-        self.b_edit = QPushButton("Bearbeiten …")
+        self.b_edit = QPushButton(tr("Edit …"))
         self.b_edit.setIcon(icon("edit"))
-        self.b_edit.setToolTip("Interpret, Album, Titel, Genre und User Files bearbeiten (F2)")
+        self.b_edit.setToolTip(tr("Edit artist, album, titles, genre and user files (F2)"))
         self.b_edit.clicked.connect(lambda: self.album and self.editRequested.emit(self.album.slot))
         btns.addWidget(self.b_edit)
         btns.addWidget(self.b_full)
@@ -131,36 +132,35 @@ class AlbumDetail(QFrame):
             return
         self.cover.setPixmap(self.cover_fn(album, 200))
         self.l_album.setText(album.display_album)
-        self.l_artist.setText(album.display_artist or "Unbekannter Interpret")
-        parts = [f"Disc #{album.slot}"]
+        self.l_artist.setText(album.display_artist or tr("Unknown artist"))
+        parts = [tr("Disc #{0}").format(album.slot)]
         if album.year:
             parts.append(str(album.year))
         if album.music_type:
             parts.append(music_type_name(album.music_type))
         if album.track_count:
-            parts.append(f"{album.track_count} Tracks")
+            parts.append(tr("{0} tracks").format(album.track_count))
         if album.duration_s:
             parts.append(fmt_time(album.duration_s))
         ufs = [uf_names.get(n, f"User File {n}") for n in range(1, 9) if album.user_files & (1 << (n - 1))]
         if ufs:
-            parts.append("User Files: " + ", ".join(ufs))
-        parts.append("Titel: " + SOURCE_TEXT.get(album.title_source, ""))
+            parts.append(tr("User files: ") + ", ".join(ufs))
+        parts.append(tr("Titles: ") + SOURCE_TEXT.get(album.title_source, ""))
         self.l_info.setText(" · ".join(parts))
         if album.mb_status == "ambiguous":
-            self.hint.setText("MusicBrainz hat mehrere mögliche Alben gefunden – bitte „Treffer wählen …“.")
+            self.hint.setText(tr("MusicBrainz found several possible albums – please use „Choose match …“."))
         elif not album.present:
-            self.hint.setText("Diese Disc ist derzeit nicht im Wechsler.")
+            self.hint.setText(tr("This disc is currently not in the changer."))
         elif not album.has_toc:
-            self.hint.setText("Für Tracklängen und vollständige Titel bitte „Vollständig einlesen“ "
-                              "(die Disc wird dafür kurz geladen).")
+            self.hint.setText(tr("For track lengths and full titles, please use „Full read“ (the disc will be loaded briefly)."))
         else:
             self.hint.setText("")
         self.hint.setVisible(bool(self.hint.text()))
         self.b_full.setEnabled(album.present)
         self.b_reread.setEnabled(album.present)
         self.b_meta.setEnabled(album.has_toc)
-        self.b_meta.setToolTip("Titel und Cover bei MusicBrainz suchen" if album.has_toc
-                               else "Erst „Vollständig einlesen“ (Inhaltsverzeichnis nötig)")
+        self.b_meta.setToolTip(tr("Look up titles and cover at MusicBrainz") if album.has_toc
+                               else tr("First use „Full read“ (table of contents needed)"))
         self.b_match.setVisible(album.has_toc and album.mb_status not in (None, "ok", "none"))
         self.btn_layout.invalidate()                 # re-place the buttons when one is shown/hidden
         self.btn_layout.activate()
@@ -168,7 +168,7 @@ class AlbumDetail(QFrame):
         for t in album.tracks:
             it = QTreeWidgetItem([str(t.no), t.title, fmt_time(t.length_s) if t.length_s else ""])
             it.setData(0, Qt.ItemDataRole.UserRole, t.no)
-            it.setToolTip(1, f"{t.title}\nQuelle: {SOURCE_TEXT.get(t.source, t.source)}")
+            it.setToolTip(1, tr("{0}\nSource: {1}").format(t.title, SOURCE_TEXT.get(t.source, t.source)))
             it.setTextAlignment(0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             it.setTextAlignment(2, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             it.setForeground(0, QColor(COLORS["text2"]))

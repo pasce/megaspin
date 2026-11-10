@@ -1,5 +1,6 @@
 """SerialBackend: direct RS-232 connection via the protocol core."""
 from __future__ import annotations
+from ..i18n import tr
 
 import logging
 import time
@@ -127,12 +128,12 @@ class SerialBackend(ChangerBackend):
             self._sim = None
 
     def _label(self) -> str:
-        return "Simulator" if self.target == SIM_TARGET else self.target
+        return tr("Simulator") if self.target == SIM_TARGET else self.target
 
     def _on_status(self, st: PlayerStatus, changed: set) -> None:   # engine thread -> signal
         if "online" in changed:
             self.connectionChanged.emit(st.online, f"{st.model} · {self._label()}" if st.online
-                                        else "Wechsler antwortet nicht")
+                                        else tr("Changer is not responding"))
         self.statusChanged.emit(st.to_dict(), sorted(changed))
 
     def status(self) -> dict:
@@ -142,7 +143,7 @@ class SerialBackend(ChangerBackend):
     def _do(self, fn, callback=None) -> None:
         svc = self.svc
         if not svc:
-            self.error.emit("NOT_CONNECTED", "Keine Verbindung zum Wechsler")
+            self.error.emit("NOT_CONNECTED", tr("No connection to the changer"))
             return
         self.run_async(lambda: fn(svc), callback)
 

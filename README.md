@@ -7,7 +7,7 @@ MegaSpin replaces the old **Kenwood "CD Changer Controller" (NetNamer)** PC-LINK
 
 > 🔍 **Author's note:** These Kenwood mega CD changers use a **proprietary serial protocol that is not public**. It was reverse-engineered from the original software for interoperability, with the decompiler [Ghidra](https://github.com/NationalSecurityAgency/ghidra), the disassembler [Capstone](https://www.capstone-engine.org/) and AI assistance. The serial monitor [Device Monitoring Studio](https://www.hhdsoftware.com/device-monitoring-studio) was used to monitor, log and analyze the raw serial data and the half-duplex communication between PC and changer. Before it ran on real hardware, MegaSpin was first developed against a **simulator, a digital twin of the changer** built from these captures. Every feature was then verified live on the changer. MegaSpin contains no code, binaries or assets from the original software.
 
-> 🇩🇪 **German only for now.** Unfortunately, the user interface is currently available in German only. An English translation will follow in due course.
+> 🌍 **Languages:** English and German. The language follows your system by default and can be changed in Settings (restart needed). More languages are welcome, see [Translations](#translations).
 
 <a href="screenshots/megaspin-library.webp"><img src="screenshots/megaspin-library.webp" alt="MegaSpin – album library"></a>
 
@@ -182,9 +182,26 @@ Your library is stored locally and is available immediately on the next start, e
 
 ## Known limitations (beta)
 
-- **The user interface is German only for now.** English is planned.
+- Only English and German are translated so far. Other languages need a translator, see below.
 - No installer yet (Windows setup / Linux AppImage are planned).
 - The changer's own program list (PGM) and its built-in genre/user-file play modes are not used. MegaSpin replaces them with playlists.
+
+---
+
+## Translations
+
+MegaSpin uses the standard Qt translation system. English is the source language. Each language is one file, `src/megaspin/translations/megaspin_<code>.ts`, which is a plain XML file. Translators can edit it with [Qt Linguist](https://doc.qt.io/qt-6/linguist-translators.html) or any text editor.
+
+**To add a language** (for example French, code `fr`):
+
+```bash
+pip install -e ./megaspin          # or: pip install PySide6
+python megaspin/tools/update_translations.py fr
+```
+
+This creates `src/megaspin/translations/megaspin_fr.ts`. Translate every entry that is marked `unfinished`, remove that mark, and run the command again. It compiles the file into `megaspin_fr.qm`, which MegaSpin loads. The new language then appears in Settings automatically. The placeholders `{0}`, `{1}` and so on must stay in the translation.
+
+Please send the `.ts` file as a pull request, with the compiled `.qm` file if you can. The German file is the example to follow.
 
 ---
 

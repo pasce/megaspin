@@ -1,23 +1,24 @@
 """Human-readable description of control bytes and frames (protocol console, PROT §5–§9)."""
 from __future__ import annotations
 
+from ..i18n import tr
 from .codec import BadFrame, Ctrl, Frame
 from .constants import KEYS, MODES, PLAY_STATES, FrameType, music_type_name
 from .parsers import parse_minmax, parse_status, parse_text, parse_toc
 
-CTRL_TEXT = {0x05: "ENQ – Sitzung anfragen", 0x06: "ACK – bestätigt", 0x15: "NAK – abgelehnt",
-             0x04: "EOT – Sitzung Ende"}
+CTRL_TEXT = {0x05: tr("ENQ – request session"), 0x06: tr("ACK – acknowledged"), 0x15: tr("NAK – rejected"),
+             0x04: tr("EOT – end of session")}
 KEY_NAMES = {v: k for k, v in KEYS.items()}
 KEY_TEXT = {"play_pause": "Play/Pause", "stop": "Stop", "repeat": "Repeat", "random": "Random",
-            "prev": "Zurück", "next": "Weiter", "rew": "Rücklauf (gedrückt)", "ff": "Vorlauf (gedrückt)"}
-PLAY_TEXT = {"stopped": "Stop", "stopping": "stoppt", "searching": "Suche/Laden", "playing": "Wiedergabe",
-             "paused": "Pause", "ff": "Vorlauf", "rew": "Rücklauf"}
-REQ_TEXT = {0x01: "Texte", 0x02: "Min/Max-Track", 0x04: "Inhaltsverzeichnis (TOC)", 0x08: "User Files",
-            0x10: "Music Type", 0x20: "Programmliste"}
-CHECK_TEXT = {0x80: "Titeleingabe prüfen", 0x40: "User-File-Namen prüfen", 0x20: "Programm prüfen",
-              0x10: "Modus-Wiedergabe prüfen"}
-TEXT_KIND = {0: "Disc-Titel", 1: "Track-Titel", 7: "User-File-Name"}
-REQ_TEXT_KIND = {0: "Disc-Titel", 1: "alle Titel", 7: "User-File-Namen"}
+            "prev": tr("Previous"), "next": tr("Next"), "rew": tr("Rewind (held)"), "ff": tr("Fast forward (held)")}
+PLAY_TEXT = {"stopped": "Stop", "stopping": tr("stopping"), "searching": tr("searching / loading"),
+             "playing": tr("playing"), "paused": tr("paused"), "ff": tr("Fast forward"), "rew": tr("Rewind")}
+REQ_TEXT = {0x01: tr("texts"), 0x02: tr("Min/Max track"), 0x04: tr("table of contents (TOC)"),
+            0x08: tr("user files"), 0x10: "Music Type", 0x20: tr("program list")}
+CHECK_TEXT = {0x80: tr("check title input"), 0x40: tr("check user file names"), 0x20: tr("check program"),
+              0x10: tr("check playback mode")}
+TEXT_KIND = {0: tr("disc title"), 1: tr("track title"), 7: tr("user file name")}
+REQ_TEXT_KIND = {0: tr("disc title"), 1: tr("all titles"), 7: tr("user file names")}
 
 
 def _disc(p: bytes, i: int = 0) -> int:
@@ -33,25 +34,28 @@ def describe_frame(f: Frame) -> str:
             a, b = p[0], p[1]
             disc = _disc(p, 2)
             if a:
-                return f"Prüfung: {CHECK_TEXT.get(a, f'A={a:02X}')}" + (f" (Disc {disc})" if disc else "")
+                text = tr("Check: {0}").format(CHECK_TEXT.get(a, f"A={a:02X}"))
+                return text + (tr(" (disc {0})").format(disc) if disc else "")
             what = REQ_TEXT.get(b, f"B={b:02X}")
             if b == 0x01 and len(p) > 5:
-                what += f" ({REQ_TEXT_KIND.get(p[5], f'Art {p[5]}')})"
-            return f"Anfrage: {what}" + (f" für Disc {disc}" if disc else " (alle Discs)")
+                what += " (" + REQ_TEXT_KIND.get(p[5], tr("type {0}").format(p[5])) + ")"
+            return tr("Request: {0}").format(what) + (tr(" for disc {0}").format(disc) if disc
+                                                       else tr(" (all discs)"))
         if t == FrameType.KEY:
             if tuple(p[:2]) == (0xFF, 0xFF):
-                return "Taste losgelassen"
+                return tr("Key released")
             k = KEY_NAMES.get(tuple(p[:2]))
-            return "Taste: " + (KEY_TEXT.get(k, k) if k else p[:2].hex(" ").upper())
+            return tr("Key: {0}").format(KEY_TEXT.get(k, k) if k else p[:2].hex(" ").upper())
         if t == FrameType.SELECT:
-            return f"Disc {_disc(p)} Track {p[2]} " + ("abspielen" if p[3] else "laden (ohne Wiedergabe)")
+            mode = tr("play") if p[3] else tr("load (no playback)")
+            return tr("Disc {0} track {1}: {2}").format(_disc(p), p[2], mode)
         if t == FrameType.MODE:
-            return "Modus zurücksetzen (Track Mode)"
+            return tr("Reset mode (track mode)")
         if t == FrameType.PROGRAM:
-            return f"Programmliste ({p[0] if p else 0} Einträge)"
+            return tr("Program list ({0} entries)").format(p[0] if p else 0)
         if t == FrameType.STATUS:
             s = parse_status(p)
-            extra = [f"Modus {s.mode}"]
+            extra = [tr("mode {0}").format(s.mode)]
             if s.random != "off":
                 extra.append(f"Random {s.random}")
             if s.repeat:
@@ -60,48 +64,52 @@ def describe_frame(f: Frame) -> str:
                 extra.append(music_type_name(s.music_type))
             if s.user_files:
                 extra.append(f"UF 0x{s.user_files:02X}")
-            return f"Status: Disc {s.disc} Track {s.track} · " + " · ".join(extra)
+            return tr("Status: disc {0} track {1}").format(s.disc, s.track) + " · " + " · ".join(extra)
         if t == FrameType.PLAY_STATE:
             name = PLAY_STATES.get(p[0], f"{p[0]:02X}")
-            return f"Zustand: {PLAY_TEXT.get(name, name)}"
+            return tr("State: {0}").format(PLAY_TEXT.get(name, name))
         if t == FrameType.DISC_LOADED:
-            return f"Geladen: Disc {_disc(p)}"
+            return tr("Loaded: disc {0}").format(_disc(p))
         if t == FrameType.EVENT:
-            return {0: "Klappe geschlossen", 1: "Klappe offen"}.get(p[0], f"Ereignis {p[0]:02X}")
+            if p[0] in (0, 1):
+                return tr("Door closed") if p[0] == 0 else tr("Door open")
+            return tr("Event {0}").format(f"{p[0]:02X}")
         if t == FrameType.MINMAX:
             m = parse_minmax(p)
-            return f"Min/Max: Disc {m.disc} Track {m.first}–{m.last}"
+            return tr("Min/Max: disc {0} track {1}–{2}").format(m.disc, m.first, m.last)
         if t == FrameType.TOC:
             toc = parse_toc(p)
             if toc.status != 1:
-                return f"TOC: Disc {toc.disc} nicht lesbar (nicht geladen)"
-            return f"TOC: Disc {toc.disc}, {toc.track_count} Tracks, Länge {toc.leadout[0]}:{toc.leadout[1]:02d}"
+                return tr("TOC: disc {0} not readable (not loaded)").format(toc.disc)
+            return tr("TOC: disc {0}, {1} tracks, length {2}:{3:02d}").format(
+                toc.disc, toc.track_count, toc.leadout[0], toc.leadout[1])
         if t in (FrameType.USER_FILES, FrameType.MUSIC_TYPE):
             v = p[2] if len(p) > 2 else 0
             if t == FrameType.MUSIC_TYPE:
-                return f"Music Type Disc {_disc(p)}: {music_type_name(v)}"
-            return f"User Files Disc {_disc(p)}: 0x{v:02X}"
+                return tr("Music type disc {0}: {1}").format(_disc(p), music_type_name(v))
+            return tr("User files disc {0}: 0x{1:02X}").format(_disc(p), v)
         if t == FrameType.RESULT:
-            return f"Antwort: 0x{p[0]:02X}" if p else "Antwort"
+            return tr("Result: 0x{0:02X}").format(p[0]) if p else tr("Result")
         if t in (FrameType.TEXT, FrameType.CDTEXT):
             e = parse_text(t, p)
-            src = "CD-TEXT" if t == FrameType.CDTEXT else "Speicher"
-            kind = TEXT_KIND.get(e.kind, f"Art {e.kind}")
+            src = tr("CD-TEXT") if t == FrameType.CDTEXT else tr("memory")
+            kind = TEXT_KIND.get(e.kind, tr("type {0}").format(e.kind))
             if e.kind == 1 and e.index == 0:
-                kind = "Disc-Titel"
-            where = f"Disc {e.disc}" + (f" Track {e.index}" if e.kind == 1 and e.index else "")
-            txt = e.text if e.text is not None else f"({e.marker or 'leer'})"
+                kind = tr("disc title")
+            where = tr("disc {0}").format(e.disc) + (tr(" track {0}").format(e.index)
+                                                    if e.kind == 1 and e.index else "")
+            txt = e.text if e.text is not None else f"({e.marker or tr('empty')})"
             return f"{src} {kind} {where}: {txt}"
     except Exception:
         pass
-    return f"Frame {t:02X} ({len(p)} Bytes)"
+    return tr("Frame {0} ({1} bytes)").format(f"{t:02X}", len(p))
 
 
 def describe(msg) -> str:
     if isinstance(msg, Ctrl):
-        return CTRL_TEXT.get(msg.byte, f"Steuerbyte {msg.byte:02X}")
+        return CTRL_TEXT.get(msg.byte, tr("Control byte {0}").format(f"{msg.byte:02X}"))
     if isinstance(msg, BadFrame):
-        return "Fehlerhafter Frame (Prüfsumme)"
+        return tr("Faulty frame (checksum)")
     if isinstance(msg, Frame):
         return describe_frame(msg)
     return str(msg)

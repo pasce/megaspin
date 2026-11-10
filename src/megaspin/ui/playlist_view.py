@@ -1,5 +1,6 @@
 """Playlist view (Desktop_App_Design §9.7): entries of one playlist, reorder by drag & drop."""
 from __future__ import annotations
+from ..i18n import tr
 
 from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QColor, QIcon, QKeySequence, QShortcut
@@ -47,14 +48,14 @@ class PlaylistView(QWidget):
         self.b_play = QToolButton()
         self.b_play.setObjectName("PlayButton")
         self.b_play.setIcon(icon("play", "#FFFFFF", 22))
-        self.b_play.setToolTip("Playlist abspielen")
+        self.b_play.setToolTip(tr("Play playlist"))
         self.b_play.clicked.connect(lambda: self.pid and self.playRequested.emit(self.pid, 0, False))
-        self.b_shuffle = QPushButton("Zufällig")
+        self.b_shuffle = QPushButton(tr("Shuffle"))
         self.b_shuffle.setIcon(icon("shuffle"))
         self.b_shuffle.clicked.connect(lambda: self.pid and self.playRequested.emit(self.pid, 0, True))
-        self.b_rename = QPushButton("Umbenennen …")
+        self.b_rename = QPushButton(tr("Rename …"))
         self.b_rename.clicked.connect(lambda: self.pid and self.renameRequested.emit(self.pid))
-        self.b_delete = QPushButton("Löschen")
+        self.b_delete = QPushButton(tr("Delete"))
         self.b_delete.clicked.connect(lambda: self.pid and self.deleteRequested.emit(self.pid))
         for w in (self.b_play, self.b_shuffle, self.b_rename, self.b_delete):
             head.addWidget(w, 0, Qt.AlignmentFlag.AlignVCenter)
@@ -62,7 +63,7 @@ class PlaylistView(QWidget):
 
         self.tree = _Tree()
         self.tree.setColumnCount(4)
-        self.tree.setHeaderLabels(["", "Titel", "Album", "Dauer"])
+        self.tree.setHeaderLabels(["", tr("Title"), tr("Album"), tr("Duration")])
         self.tree.setRootIsDecorated(False)
         self.tree.setIndentation(0)
         self.tree.setUniformRowHeights(True)
@@ -82,7 +83,7 @@ class PlaylistView(QWidget):
         h.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         h.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
         lay.addWidget(self.tree, 1)
-        self.empty = QLabel("Diese Playlist ist leer. Alben oder Tracks per Rechtsklick → „Zu Playlist“ hinzufügen.")
+        self.empty = QLabel(tr("This playlist is empty. Add albums or tracks with right-click → „Add to playlist“."))
         self.empty.setObjectName("Subtitle")
         self.empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
         lay.addWidget(self.empty)
@@ -109,13 +110,13 @@ class PlaylistView(QWidget):
         for i, (slot, track) in enumerate(items):
             a = self.db.album(slot)
             album_txt = (f"{a.display_album} – {a.display_artist}" if a and a.display_artist
-                         else (a.display_album if a else f"Disc {slot}")) + f"  · #{slot}"
+                         else (a.display_album if a else tr("Disc {0}").format(slot))) + f"  · #{slot}"
             if track:
                 t = next((x for x in a.tracks if x.no == track), None) if a else None
-                title = f"{track}. {t.title}" if t else f"Track {track}"
+                title = f"{track}. {t.title}" if t else tr("Track {0}").format(track)
                 length = t.length_s if t else None
             else:
-                title = "Ganze Disc"
+                title = tr("Whole disc")
                 length = a.duration_s if a else None
             if length:
                 total += length
@@ -129,12 +130,13 @@ class PlaylistView(QWidget):
             it.setForeground(3, QColor(COLORS["text2"]))
             it.setTextAlignment(3, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             if a and not a.present:
-                it.setToolTip(1, "Disc ist nicht im Wechsler – wird beim Abspielen übersprungen")
+                it.setToolTip(1, tr("Disc is not in the changer – will be skipped when playing"))
                 for c in range(4):
                     it.setForeground(c, QColor(COLORS["text2"]))
             self.tree.addTopLevelItem(it)
-        self.l_info.setText(f"{len(items)} Einträge" + (f" · {'mind. ' if unknown else ''}{fmt_time(total)}"
-                                                       if total else ""))
+        self.l_info.setText(tr("{0} entries").format(len(items))
+                             + (tr(" · {0}{1}").format(tr("min. ") if unknown else "", fmt_time(total))
+                                if total else ""))
         self.empty.setVisible(not items)
         self.tree.setVisible(bool(items))
         self.b_play.setEnabled(bool(items))
@@ -188,9 +190,9 @@ class PlaylistView(QWidget):
             return
         i = self.tree.indexOfTopLevelItem(it)
         m = QMenu(self)
-        m.addAction(icon("play"), "Ab hier abspielen", lambda: self.playRequested.emit(self.pid, i, False))
+        m.addAction(icon("play"), tr("Play from here"), lambda: self.playRequested.emit(self.pid, i, False))
         m.addSeparator()
-        m.addAction("Nach oben", lambda: self._move(-1)).setEnabled(i > 0)
-        m.addAction("Nach unten", lambda: self._move(+1)).setEnabled(i < self.tree.topLevelItemCount() - 1)
-        m.addAction("Entfernen (Entf)", self.remove_selected)
+        m.addAction(tr("Move up"), lambda: self._move(-1)).setEnabled(i > 0)
+        m.addAction(tr("Move down"), lambda: self._move(+1)).setEnabled(i < self.tree.topLevelItemCount() - 1)
+        m.addAction(tr("Remove (Del)"), self.remove_selected)
         m.exec(self.tree.viewport().mapToGlobal(pos))

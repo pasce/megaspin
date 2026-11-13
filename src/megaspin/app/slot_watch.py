@@ -49,13 +49,14 @@ class SlotWatcher(QObject):
         self._searching = st.get("play_state") == "searching"
         if self._searching:
             self._last_searching = time.monotonic()
+        was_open = self.door_open
         self.door_open = st.get("changer_event") == 1
         if "*" in changed:                              # status burst after connecting
             if self.door_open:                          # connected while the door is open: wait for close
                 self._arm()
             return
-        if "event_count" in changed and not self.door_open:
-            self._arm()                                 # door has just been closed
+        if was_open and not self.door_open:
+            self._arm()                                 # door has just been closed (open -> closed only)
 
     # ------------------------------------------------------------------ work
     def _arm(self) -> None:

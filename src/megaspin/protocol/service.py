@@ -35,7 +35,7 @@ class PlayerStatus:
     disc_user_files: int = 0
     pgm_step: int = 0
     changer_event: int = -1
-    event_count: int = 0            # incremented on every 0x15 frame (door / inventory / memory change)
+    event_count: int = 0            # incremented when the door state (0x15) actually changes
     updated: float = field(default_factory=time.time)
 
     def to_dict(self) -> dict:
@@ -154,7 +154,10 @@ class ChangerService:
                 with self._cond:
                     self._cond.notify_all()
             elif t == FrameType.EVENT:
-                self._update(changer_event=parse_event(p), event_count=self.status.event_count + 1)
+                ev = parse_event(p)
+                # Every Hello (resync) status burst repeats the door state; only a real change counts.
+                count = self.status.event_count + (1 if ev != self.status.changer_event else 0)
+                self._update(changer_event=ev, event_count=count)
             else:
                 log.info("unsolicited frame type %02X ignored", t)
         except Exception:

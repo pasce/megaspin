@@ -41,46 +41,69 @@ class SimDisc:
         return len(self.starts)
 
 
+def _toc(durations: list[int]) -> tuple[list[tuple[int, int]], tuple[int, int]]:
+    """Track starts (min, sec) and lead-out for track lengths in seconds (2 s pre-gap, like a real disc)."""
+    def mmss(t: int) -> tuple[int, int]:
+        return t // 60, t % 60
+    pos = 2
+    starts = []
+    for d in durations:
+        starts.append(mmss(pos))
+        pos += d
+    return starts, mmss(pos)
+
+
+def _disc(slot: int, album_title: str, tracks: list[tuple[str, int]], *, suffix: str = "",
+          **kw) -> SimDisc:
+    """A fictional disc: CD-TEXT title 'Artist   Album' and track titles, lengths in seconds."""
+    starts, leadout = _toc([d for _, d in tracks])
+    cdtext = {0: album_title, **{i + 1: t + suffix for i, (t, _) in enumerate(tracks)}}
+    return SimDisc(slot, starts, leadout, cdtext=cdtext, **kw)
+
+
 def default_discs() -> dict[int, SimDisc]:
-    """The six discs from the real changer (TOCs of 149/150 are real)."""
-    springsteen = ["Devils & Dust", "All The Way Home", "Reno", "Long Time Comin'", "Black Cowboys",
-                   "Maria's Bed", "Silver Palomino", "Jesus Was An Only Son", "Leah", "The Hitter",
-                   "All I'm Thinkin' About", "Matamoros Banks"]
-    seattle = ["EVEN FLOW", "JEREMY", "LUKIN", "NOT FOR YOU", "DAUGHTER", "ENCORE BREAK",
-               "OFF HE GOES", "LIGHT YEARS", "PARTING WAYS", "GO", "ONCE"]
-    detroit = ["GO", "CORDUROY", "GRIEVANCE", "STATE OF LOVE AND TRUST", "TREMOR CHRIST",
-               "ELDERLY WOMAN BEHIND THE COUNTER IN A SMALL TOWN", "INSIGNIFICANCE", "LAST EXIT",
-               "ANIMAL", "IN MY TREE", "I GOT ID", "BETTER MAN", "EVEN FLOW", "DAUGHTER",
-               "THIN AIR", "JEREMY"]
-    sea = " (Live in Seattle, Washington - November 6 2000)"
-    det = " (Live in Detroit, Michigan - October 7 2000)"
+    """Six fictional discs for the digital twin. Artists, albums, tracks and lengths are invented;
+    the slots and track counts follow the layout of a real changer."""
     d: dict[int, SimDisc] = {}
-    d[5] = SimDisc(5, [(0, 2), (4, 1), (8, 22), (13, 37), (17, 10), (20, 49), (23, 56), (29, 52),
-                       (34, 41), (38, 0), (41, 12), (44, 30)], (48, 59))
-    d[147] = SimDisc(147, [(0, 2), (4, 42), (8, 43), (12, 43), (16, 46), (20, 18), (24, 36),
-                           (29, 33), (33, 30), (36, 51), (40, 45), (44, 9), (47, 30), (51, 0),
-                           (54, 4)], (58, 1))
-    d[148] = SimDisc(148, [(0, 2), (3, 14), (6, 4), (9, 59), (13, 26), (17, 2), (23, 1), (25, 51),
-                           (30, 36), (34, 51), (38, 7), (41, 16)], (46, 18))
-    d[149] = SimDisc(149, [(0, 2), (5, 0), (8, 39), (12, 47), (17, 4), (21, 13), (26, 48), (30, 11),
-                           (33, 5), (36, 37), (42, 30), (46, 52)], (50, 53),
-                     cdtext={0: "Bruce Springsteen   Devils & Dust",
-                             **{i + 1: t for i, t in enumerate(springsteen)}}, attr=0x93)
-    d[150] = SimDisc(150, [(0, 2), (6, 12), (11, 6), (11, 57), (17, 45), (27, 27), (31, 34),
-                           (37, 13), (42, 59), (48, 3), (50, 50)], (54, 18),
-                     cdtext={0: "PEARL JAM   SEATTLE, WASHINGTON NOVEMBER 6 2000 / CD2",
-                             **{i + 1: t + sea for i, t in enumerate(seattle)}},
-                     music_type=3, user_files=1, attr=0x13)
-    d[151] = SimDisc(151, [(0, 2), (3, 54), (8, 26), (11, 40), (15, 18), (20, 17), (23, 57),
-                           (28, 26), (31, 2), (33, 59), (38, 8), (41, 6), (44, 17), (49, 31),
-                           (55, 5), (58, 9)], (62, 33),
-                     cdtext={0: "PEARL JAM   DETROIT, MICHIGAN OCTOBER 7 2000",
-                             **{i + 1: t + det for i, t in enumerate(detroit)}}, attr=0x13)
+    d[5] = _disc(5, "Lena Marsh   Paper Harbour", [
+        ("Morning Ferry", 204), ("Salt on the Glass", 231), ("Low Tide Lights", 187),
+        ("Paper Harbour", 259), ("Gull Song", 176), ("Second Pier", 213), ("Tin Roof Rain", 242),
+        ("Halfway Home", 198), ("Blue Cranes", 221), ("Ropes and Knots", 189), ("Slow Bell", 264),
+        ("Last Lantern", 310)])
+    d[147] = _disc(147, "The Velvet Owls   Night Market", [
+        ("Open Door", 183), ("Neon Sparrow", 242), ("Night Market", 268), ("Copper Coins", 201),
+        ("Velvet Owl", 226), ("Red Lantern Street", 195), ("Quiet Trams", 214), ("Sugar Hour", 178),
+        ("Third Floor", 232), ("Static Hearts", 209), ("Harbour Lights Fade", 247),
+        ("Empty Carousel", 199), ("Afterglow Diner", 221), ("Goodnight Market", 286),
+        ("Closing Shutters", 192)])
+    d[148] = _disc(148, "Hollow Pines   Glass Orchard", [
+        ("Glass Orchard", 215), ("Winter Fence", 188), ("Hollow Pines", 254), ("Honey Creek", 201),
+        ("Pale Morning", 232), ("Iron Gate", 176), ("Orchard Bells", 209), ("Long Shadow", 243),
+        ("Small Hours", 198), ("Sparrow Road", 221), ("Water Mill", 187), ("Last Frost", 262)])
+    d[149] = _disc(149, "Dana Reyes   Quiet Engines", [
+        ("Quiet Engines", 238), ("Ignition Waltz", 201), ("Cold Start", 186), ("Diesel Hymn", 254),
+        ("Rust and Chrome", 219), ("Idle Ground", 196), ("Night Shift", 233), ("Highway Mercy", 271),
+        ("Turnpike Blues", 205), ("Engine Room", 184), ("Coasting", 228), ("Cool Down", 302)],
+        attr=0x93, music_type=7)
+    d[150] = _disc(150, "NORTHLINE   LIVE AT HARBOUR HALL, MARCH 3 2001 / CD2", [
+        ("Signal Fire", 312), ("Undertow", 264), ("Glass Coast", 287), ("Harbour Hall", 341),
+        ("Tidewater", 229), ("Night Crossing", 298), ("Blue Ferry", 256), ("Cliff Road", 274),
+        ("Storm Watch", 318), ("Lighthouse", 243), ("Last Call", 365)],
+        suffix=" (Live at Harbour Hall)", music_type=3, user_files=1, attr=0x13)
+    d[151] = _disc(151, "NORTHLINE   LIVE IN RIVERTON, OCTOBER 7 1999", [
+        ("Riverbed", 276), ("Bright Cargo", 232), ("Fog Horn", 198), ("Ballast", 311),
+        ("Paper Boats", 224), ("Rope Swing", 257), ("Tin Lanterns", 203), ("Sea Glass", 289),
+        ("Cold Dock", 246), ("Low Gulls", 215), ("Sail Away", 268), ("Stone Pier", 194),
+        ("Dry Land", 232), ("Undertow Again", 301), ("Warm Harbour", 219), ("Last Light", 342)],
+        suffix=" (Live in Riverton)", attr=0x13)
     for disc in d.values():                    # memory mirrors CD-TEXT (changer copies it on load)
         if disc.cdtext:
             disc.memory_title = (disc.cdtext.get(0) or "")[:25] or None
             disc.memory_tracks = {n: t[:25] for n, t in disc.cdtext.items() if 0 < n <= 20}
-    d[149].music_type = 7
+    for slot in (5, 147, 148):                 # discs without any title: TOC only, as on the real changer
+        d[slot].cdtext = None
+        d[slot].memory_title = None
+        d[slot].memory_tracks = {}
     return d
 
 

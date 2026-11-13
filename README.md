@@ -94,7 +94,7 @@ The changer reports itself as `CD-425M` over the serial link.
 ## What you need
 
 1. **The changer** with its 9-pin RS-232C PC-LINK port on the back.
-2. **A PC** with Windows 10/11 or Linux, and **Python 3.11 or newer** (an installer is planned).
+2. **A PC** with Windows 10/11 or Linux. On Windows you can use the installer; otherwise you need **Python 3.11 or newer**.
 3. **The right cable.** The changer needs a **crossed (null-modem) serial cable**, called an *"RS-232C connection cable (Reverse type)"* in the changer's manual. A normal "straight" serial cable does **not** work.
 
 | Your PC has … | Use |
@@ -109,7 +109,9 @@ Only three wires are used (RX, TX, GND). Hardware handshake is not needed. MegaS
 
 ## Installation
 
-MegaSpin is not packaged yet. Install it with Python:
+**Windows (installer):** Download `MegaSpin-0.1.0-beta1-setup-x64.exe` from the [Releases](https://github.com/pasce/megaspin/releases) page and run it. It installs MegaSpin for 64-bit Windows 10/11, with a Start menu entry, an optional desktop shortcut and an uninstaller. The installer is not code-signed yet, so Windows SmartScreen may warn. Click *More info* and then *Run anyway*.
+
+**Other systems (Python):** install it with Python:
 
 ```bash
 git clone https://github.com/pasce/megaspin.git
@@ -130,7 +132,7 @@ pip install .
    ```bash
    megaspin                     # or: python -m megaspin
    megaspin --port COM4         # connect to a specific port right away (Linux: --port /dev/ttyUSB0)
-   megaspin --sim               # try it without a changer (built-in simulator)
+   megaspin --sim               # try it without a changer (built-in simulator with fictional discs)
    ```
 3. On the first start, the connection dialog searches all serial ports for the changer. Pick it and confirm. MegaSpin remembers the port and connects automatically next time.
 4. A **quick scan** runs automatically and fills the library with all occupied slots.
@@ -183,7 +185,7 @@ Your library is stored locally and is available immediately on the next start, e
 ## Known limitations (beta)
 
 - Only English and German are translated so far. Other languages need a translator, see below.
-- No installer yet (Windows setup / Linux AppImage are planned).
+- No Linux package yet. The Windows installer is available, see Installation.
 - The changer's own program list (PGM) and its built-in genre/user-file play modes are not used. MegaSpin replaces them with playlists.
 
 ---
@@ -210,7 +212,7 @@ Please send the `.ts` file as a pull request, with the compiled `.qm` file if yo
 - Python 3.11+, PySide6 (Qt 6), pyserial, SQLite.
 - The serial protocol of the changer was reverse-engineered from the original software and verified live on the changer.
 - Command-line tool for quick checks: `megaspin-cli --port COM4 status | slots | disc 150 | play 150 3 | monitor 60`
-- `megaspin --sim` starts the app with a built-in changer simulator. You can try it without any hardware.
+- `megaspin --sim` starts the app with a built-in changer simulator and its own library of fictional discs. You can try it without any hardware.
 
 ---
 

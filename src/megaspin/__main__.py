@@ -34,6 +34,9 @@ def main() -> int:
     app.setEffectEnabled(Qt.UIEffect.UI_AnimateCombo, False)     # no flicker when combo boxes open
     app.setApplicationName("MegaSpin")
     app.setOrganizationName("megaspin")
+    from PySide6.QtGui import QIcon
+    from pathlib import Path
+    app.setWindowIcon(QIcon(str(Path(__file__).parent / "resources" / "megaspin.png")))
     settings = Settings.load()
     # The language must be active before any UI module is imported: some module-level texts
     # are translated when the module is loaded.
@@ -45,7 +48,11 @@ def main() -> int:
     from .ui.theme import stylesheet
 
     app.setStyleSheet(stylesheet(settings.accent))
-    win = MainWindow(settings)
+    db_path = None
+    if args.sim:                      # fictional library for the digital twin
+        from .sim.twin_library import prepare
+        db_path = prepare()
+    win = MainWindow(settings, db_path=db_path)
     win.show()
     if args.sim:
         QTimer.singleShot(100, lambda: win.connect_to(SIM_TARGET))

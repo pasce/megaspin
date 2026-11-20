@@ -3,6 +3,14 @@
     <context>
         <name>MegaSpin</name>
         <message>
+            <source>  ·  changer memory could not be read, stored data shown</source>
+            <translation>  ·  Wechsler-Speicher nicht lesbar, gespeicherte Daten angezeigt</translation>
+        </message>
+        <message>
+            <source>  ·  reading the changer memory …</source>
+            <translation>  ·  Wechsler-Speicher wird gelesen …</translation>
+        </message>
+        <message>
             <source> (all discs)</source>
             <translation> (alle Discs)</translation>
         </message>
@@ -175,6 +183,10 @@
             <translation>Zurück zur Übersicht (Esc)</translation>
         </message>
         <message>
+            <source>Back to track mode</source>
+            <translation>Zurück im Track-Modus</translation>
+        </message>
+        <message>
             <source>Blue</source>
             <translation>Blau</translation>
         </message>
@@ -231,6 +243,10 @@
             <translation>Wechsler-Speicher (25 Zeichen)</translation>
         </message>
         <message>
+            <source>Changer not supported</source>
+            <translation>Wechsler wird nicht unterstützt</translation>
+        </message>
+        <message>
             <source>changer → PC</source>
             <translation>W → PC</translation>
         </message>
@@ -259,6 +275,10 @@
             <translation>Prüfung: {0}</translation>
         </message>
         <message>
+            <source>Choose cover for disc {0}</source>
+            <translation>Cover für Disc {0} wählen</translation>
+        </message>
+        <message>
             <source>Choose data folder of the old program</source>
             <translation>Datenordner des alten Programms wählen</translation>
         </message>
@@ -277,6 +297,10 @@
         <message>
             <source>Clear</source>
             <translation>Leeren</translation>
+        </message>
+        <message>
+            <source>Click to return to track mode</source>
+            <translation>Klicken, um in den Track-Modus zurückzukehren</translation>
         </message>
         <message>
             <source>Close</source>
@@ -375,6 +399,10 @@
             <translation>Disc-Titel</translation>
         </message>
         <message>
+            <source>Disc title in changer: – (nothing stored)</source>
+            <translation>Disc-Titel im Wechsler: – (nichts gespeichert)</translation>
+        </message>
+        <message>
             <source>Disc title in changer: „{0}“</source>
             <translation>Disc-Titel im Wechsler: „{0}“</translation>
         </message>
@@ -419,12 +447,20 @@
             <translation>Disc {0}: mehrere Treffer – bitte auswählen</translation>
         </message>
         <message>
+            <source>Disc {0}: titles written to the changer</source>
+            <translation>Disc {0}: Titel in den Wechsler geschrieben</translation>
+        </message>
+        <message>
             <source>Disc {0}: writing failed ({1})</source>
             <translation>Disc {0}: Schreiben fehlgeschlagen ({1})</translation>
         </message>
         <message>
             <source>Disc {0}: writing titles to the changer …</source>
             <translation>Disc {0}: Titel werden in den Wechsler geschrieben …</translation>
+        </message>
+        <message>
+            <source>Disc {0}: writing to the changer failed ({1})</source>
+            <translation>Disc {0}: Schreiben in den Wechsler fehlgeschlagen ({1})</translation>
         </message>
         <message>
             <source>Disc {0}: written to the changer</source>
@@ -485,6 +521,10 @@
         <message>
             <source>Edit …</source>
             <translation>Bearbeiten …</translation>
+        </message>
+        <message>
+            <source>Edit … (F2)</source>
+            <translation>Bearbeiten … (F2)</translation>
         </message>
         <message>
             <source>ENQ – request session</source>
@@ -677,6 +717,10 @@ Ab dem nächsten Track stimmt die Anzeige wieder.</translation>
         <message>
             <source>Loaded: disc {0}</source>
             <translation>Geladen: Disc {0}</translation>
+        </message>
+        <message>
+            <source>loading the disc</source>
+            <translation>Disc wird geladen</translation>
         </message>
         <message>
             <source>Look up metadata</source>
@@ -875,6 +919,10 @@ Ab dem nächsten Track stimmt die Anzeige wieder.</translation>
             <translation>Orange</translation>
         </message>
         <message>
+            <source>own</source>
+            <translation>eigene</translation>
+        </message>
+        <message>
             <source>own entries</source>
             <translation>eigene Angaben</translation>
         </message>
@@ -1007,6 +1055,14 @@ Ab dem nächsten Track stimmt die Anzeige wieder.</translation>
             <translation>Protokoll-Konsole … (F12)</translation>
         </message>
         <message>
+            <source>Queued: full read</source>
+            <translation>In Warteschlange: vollständiges Einlesen</translation>
+        </message>
+        <message>
+            <source>Queued: quick read</source>
+            <translation>In Warteschlange: schnelles Einlesen</translation>
+        </message>
+        <message>
             <source>Quick – titles from changer memory, genre, user files (no disc loading, approx. 1 s per disc)</source>
             <translation>Schnell – Titel aus dem Wechsler-Speicher, Genre, User Files (ohne Mechanik, ca. 1 s pro Disc)</translation>
         </message>
@@ -1049,6 +1105,14 @@ Ab dem nächsten Track stimmt die Anzeige wieder.</translation>
         <message>
             <source>Reading occupied slots …</source>
             <translation>Belegte Slots lesen …</translation>
+        </message>
+        <message>
+            <source>reading the table of contents</source>
+            <translation>Inhaltsverzeichnis wird gelesen</translation>
+        </message>
+        <message>
+            <source>reading the titles</source>
+            <translation>Titel werden gelesen</translation>
         </message>
         <message>
             <source>Reading will be stopped after the current disc.</source>
@@ -1307,6 +1371,10 @@ Discs, die nicht im Wechsler sind, erscheinen erst, wenn sie eingelegt und einge
             <translation>Der Wechsler speichert nur die Titel der ersten {0} Tracks.</translation>
         </message>
         <message>
+            <source>The changer reports itself as “{0}”. MegaSpin supports only the CD-425M so far. Please report this identifier at github.com/pasce/megaspin/issues, so that support for your changer can be checked.</source>
+            <translation>Der Wechsler meldet sich als „{0}“. MegaSpin unterstützt bisher nur den CD-425M. Bitte die Kennung unter github.com/pasce/megaspin/issues melden, damit die Unterstützung für diesen Wechsler geprüft werden kann.</translation>
+        </message>
+        <message>
             <source>The language change takes effect after restarting MegaSpin.</source>
             <translation>Die Sprachänderung wirkt nach einem Neustart von MegaSpin.</translation>
         </message>
@@ -1331,8 +1399,12 @@ Discs, die nicht im Wechsler sind, erscheinen erst, wenn sie eingelegt und einge
             <translation>Titel und Cover aus dem Internet</translation>
         </message>
         <message>
-            <source>Titles are cut to 25 characters, umlauts are transliterated (preview in the column „In changer“).</source>
-            <translation>Titel werden auf 25 Zeichen gekürzt, Umlaute umschrieben (Vorschau in der Spalte „Im Wechsler“).</translation>
+            <source>Titles are cut to 25 characters, umlauts are transliterated (preview in the right column).</source>
+            <translation>Titel werden auf 25 Zeichen gekürzt, Umlaute umschrieben (Vorschau in der rechten Spalte).</translation>
+        </message>
+        <message>
+            <source>Titles from MusicBrainz or your own entries are written once they are known. Only discs without CD-TEXT (the changer replaces its memory with the CD-TEXT), and only if the changer memory differs.</source>
+            <translation>Titel von MusicBrainz oder eigene Einträge werden geschrieben, sobald sie vorliegen. Nur Discs ohne CD-TEXT (der Wechsler ersetzt seinen Speicher durch den CD-TEXT) und nur, wenn der Wechsler-Speicher abweicht.</translation>
         </message>
         <message>
             <source>Titles: </source>
@@ -1431,8 +1503,20 @@ Discs, die nicht im Wechsler sind, erscheinen erst, wenn sie eingelegt und einge
             <translation>Ganze Disc</translation>
         </message>
         <message>
+            <source>Will be written (25 chars)</source>
+            <translation>Wird geschrieben (25 Z.)</translation>
+        </message>
+        <message>
+            <source>Will be written to the changer: „{0}“</source>
+            <translation>Wird in den Wechsler geschrieben: „{0}“</translation>
+        </message>
+        <message>
             <source>Will stop after the current disc …</source>
             <translation>Wird nach der aktuellen Disc abgebrochen …</translation>
+        </message>
+        <message>
+            <source>Write valid titles into the changer memory</source>
+            <translation>Gültige Titel in den Wechsler-Speicher schreiben</translation>
         </message>
         <message>
             <source>Writing failed ({0})</source>

@@ -27,7 +27,7 @@ class StatusInfo:          # 0x12
     pgm_step: int
     music_type: int
     user_files: int
-    unknown6: int
+    mode_param: int        # P[6]: user-file bit mask in user-file mode (0 in music-type mode, live)
     mode: str
     random: str
     mode_raw: int
@@ -38,7 +38,7 @@ def parse_status(p: bytes) -> StatusInfo:
     p = p.ljust(9, b"\x00")
     mode, rnd = MODES.get(p[7], ("unknown", "off"))
     return StatusInfo(disc=_u16(p), track=p[2], pgm_step=p[3], music_type=p[4],
-                      user_files=p[5], unknown6=p[6], mode=mode, random=rnd,
+                      user_files=p[5], mode_param=p[6], mode=mode, random=rnd,
                       mode_raw=p[7], repeat=p[8] != 0)
 
 
@@ -113,11 +113,34 @@ class Toc:                 # 0x06
         return " ".join(str(x) for x in parts)
 
 
+def _toc_entries(p: bytes) -> list[tuple[int, int, int]]:
+    return [(bcd(p[i]), bcd(p[i + 1]), bcd(p[i + 2])) for i in range(6, len(p) - 2, 3)]
+
+
 def parse_toc(p: bytes) -> Toc:
+    """One 0x06 frame. P[2] ("status") is the page number (juken docs; always 1 in all captures)."""
     disc, status, attr, first, last = _u16(p), p[2], p[3], p[4], p[5]
-    entries = [(bcd(p[i]), bcd(p[i + 1]), bcd(p[i + 2])) for i in range(6, len(p) - 2, 3)]
+    entries = _toc_entries(p)
     if not entries:
         raise ValueError("empty TOC")
+    return Toc(disc, status, attr, first, last, entries[:-1], entries[-1])
+
+
+def parse_toc_pages(payloads: list[bytes]) -> Toc | None:
+    """Combine one or more 0x06 frames (pages) into one TOC.
+
+    The juken documentation describes a page number in P[2] with a limited number of TOC values per
+    page; every capture so far had a single page (P[2] = 1, at most 16 tracks). Pages are joined in
+    page order. Returns None if the result does not hold last - first + 2 entries (tracks + lead-out),
+    so that a truncated TOC never produces wrong track lengths or disc IDs."""
+    pages = sorted((p for p in payloads if len(p) >= 6 and p[2] >= 1), key=lambda p: p[2])
+    if not pages:
+        return None
+    head = pages[0]
+    disc, status, attr, first, last = _u16(head), head[2], head[3], head[4], head[5]
+    entries = [e for p in pages for e in _toc_entries(p)]
+    if last < first or len(entries) != last - first + 2:
+        return None
     return Toc(disc, status, attr, first, last, entries[:-1], entries[-1])
 
 

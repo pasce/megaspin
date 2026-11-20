@@ -4,13 +4,14 @@ from ..i18n import tr
 
 from pathlib import Path
 
-from PySide6.QtCore import QByteArray, QSize, Qt, QTimer
+from PySide6.QtCore import QByteArray, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QBrush, QColor, QIntValidator, QKeySequence, QLinearGradient, QPainter, QPixmap, QShortcut
 from PySide6.QtWidgets import (QComboBox, QFileDialog, QFrame, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
                                QMainWindow, QTreeWidget, QTreeWidgetItem, QMenu, QMessageBox, QProgressBar,
                                QPushButton, QSpinBox, QSplitter, QStackedWidget, QToolButton, QVBoxLayout,
                                QWidget, QApplication, QInputDialog)
 
+from ..app.changer_sync import ChangerSync
 from ..app.metadata import MetadataService
 from ..app.scan import ScanManager
 from ..app.slot_watch import SlotWatcher
@@ -37,6 +38,18 @@ from .theme import COLORS
 
 MODE_TEXT = {"track": tr("Track mode"), "program": tr("Program mode"), "best_sel": "Best Selection",
              "music_type": tr("Music type mode"), "user_file": tr("User file mode")}
+
+
+class _ModeLabel(QLabel):
+    """Play mode in the status bar; a click returns the changer to track mode."""
+    clicked = Signal()
+
+    def mouseReleaseEvent(self, e) -> None:
+        if e.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+        super().mouseReleaseEvent(e)
+
+
 OLD_DATA_DIR = Path(r"C:\Program Files (x86)\CD Changer Controller\data")
 ACTIVE_STATES = ("playing", "paused", "ff", "rew", "searching")
 
@@ -174,6 +187,14 @@ class MainWindow(QMainWindow):
         self.slot_watch.changed.connect(self._on_changer_changed)
         self.meta.discUpdated.connect(lambda _slot: self._reload_timer.start())
         self.meta.statusText.connect(lambda t: self.statusBar().showMessage(t, 5000))
+        # option "write valid titles into the changer memory" of the read dialog
+        self.sync = ChangerSync(self.backend, self.db, self)
+        self.scan.writeRequested.connect(self.sync.arm)
+        self.scan.discRead.connect(self.sync.check)
+        self.meta.discUpdated.connect(self.sync.check)
+        self.scan.finished.connect(lambda *_: self.sync.check_all())
+        self.sync.message.connect(lambda t: (self.statusBar().showMessage(t, 8000), self.scan.logLine.emit(t)))
+        self.sync.written.connect(lambda _slot: self._reload_timer.start())
         QTimer.singleShot(1500, self.meta.enqueue_missing)
 
         if settings.window_geometry:
@@ -367,7 +388,8 @@ class MainWindow(QMainWindow):
         sb = self.statusBar()
         self.sb_conn = QLabel()
         self.sb_state = QLabel()
-        self.sb_mode = QLabel()
+        self.sb_mode = _ModeLabel()
+        self.sb_mode.clicked.connect(self._mode_label_clicked)
         self.sb_scan = QLabel()
         self.sb_prog = QProgressBar()
         self.sb_prog.setFixedWidth(140)
@@ -517,7 +539,7 @@ class MainWindow(QMainWindow):
         m.addAction(icon("play"), tr("Play"), lambda: self.play_album(slot))
         m.addAction(tr("Load only"), lambda: self.backend.load(slot))
         m.addAction(tr("Show details"), lambda: self.open_detail(slot))
-        m.addAction(icon("edit"), "Bearbeiten … (F2)", lambda: self.edit_album(slot))
+        m.addAction(icon("edit"), tr("Edit … (F2)"), lambda: self.edit_album(slot))
         self._add_to_playlist_menu(m, [(slot, 0)])
         m.addSeparator()
         m.addAction(icon("refresh"), tr("Full read (F5)"), lambda: self.read_full(slot))
@@ -555,12 +577,32 @@ class MainWindow(QMainWindow):
 
     # ------------------------------------------------------------------ editing (D6)
     def edit_album(self, slot: int) -> None:
+        """Open the dialog right away with the stored data. If the changer is connected, its memory for
+        this disc is read in the background (no mechanics) and the open dialog is updated."""
         album = self.db.album(slot)
         if not album:
             return
         can_write = self.backend.connected and album.present
         dlg = EditAlbumDialog(album, self.db.source_titles(slot), self.db.user_file_names(), can_write, self)
-        if not dlg.exec():
+        dlg.open_for_edit = True
+        svc = self.backend.svc if can_write else None
+        if svc is not None:
+            dlg.set_reading(True)
+
+            def work():
+                texts, mt, uf = svc.read_memory(slot)
+                self.db.save_memory(slot, texts, mt, uf)
+
+            def done(ok, res):
+                if not getattr(dlg, "open_for_edit", False):
+                    return                        # dialog already closed; the library is updated anyway
+                dlg.set_reading(False, failed=not ok)
+                if ok:
+                    dlg.apply_changer_refresh(self.db.source_titles(slot))
+            self.backend.run_async(work, done, report_errors=False)
+        accepted = dlg.exec()
+        dlg.open_for_edit = False
+        if not accepted:
             return
         self.db.save_user(slot, **dlg.user_values())
         self.reload_library()
@@ -844,7 +886,7 @@ class MainWindow(QMainWindow):
                 res.tocs, res.titles, res.user_files))
 
     def change_cover(self, slot: int) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, f"Cover für Disc {slot} wählen", "",
+        path, _ = QFileDialog.getOpenFileName(self, tr("Choose cover for disc {0}").format(slot), "",
                                               tr("Images (*.jpg *.jpeg *.png)"))
         if path:
             self.meta.set_cover_file(slot, path)
@@ -956,6 +998,8 @@ class MainWindow(QMainWindow):
         def done(ok, res):
             if ok:
                 self.scan.quick(only_new=self.db.slot_count() > 0)
+            elif getattr(res, "code", "") == "UNSUPPORTED_MODEL":
+                pass                     # the cable works; _on_error already shows the identifier
             else:
                 QMessageBox.warning(self, tr("Connection failed"),
                                     tr("No connection to the changer via {0}.\n\n{1}\n\n").format(label, res)
@@ -983,7 +1027,17 @@ class MainWindow(QMainWindow):
             self.player.set_now_playing(tr("Not connected"), "", None)
             self.slot_watch.stop()
 
+    def _mode_label_clicked(self) -> None:
+        if self.backend.connected and self.status.get("mode", "track") != "track":
+            self.backend.reset_mode()
+            self.statusBar().showMessage(tr("Back to track mode"), 4000)
+
     def _on_error(self, code: str, msg: str) -> None:
+        if code == "UNSUPPORTED_MODEL":
+            box = QMessageBox(QMessageBox.Icon.Warning, tr("Changer not supported"), msg, parent=self)
+            box.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            box.open()
+            return
         texts = {"BUSY": tr("Changer busy – please try again"),
                  "NOT_RESPONDING": tr("Changer is not responding"),
                  "NOT_CONNECTED": tr("No connection to the changer")}
@@ -1037,6 +1091,9 @@ class MainWindow(QMainWindow):
         rnd = {"one": tr(" · random 1 disc"), "all": tr(" · random all")}.get(st.get("random", "off"), "")
         rep = tr(" · repeat") if st.get("repeat") else ""
         self.sb_mode.setText(MODE_TEXT.get(st.get("mode", "track"), "") + rnd + rep)
+        special = st.get("mode", "track") != "track"
+        self.sb_mode.setToolTip(tr("Click to return to track mode") if special else "")
+        self.sb_mode.setCursor(Qt.CursorShape.PointingHandCursor if special else Qt.CursorShape.ArrowCursor)
         if disc and not self.sp_disc.hasFocus():
             self.sp_disc.setValue(disc)
 

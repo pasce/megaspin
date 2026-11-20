@@ -9,10 +9,11 @@ from typing import Callable
 
 from . import commands as C
 from .codec import Frame
-from .constants import HOLD_KEYS, KEYS, STEP_KEYS, Check, FrameType, Req, TextKind
+from .constants import (HOLD_KEYS, KEYS, MODE_MUSIC_TYPE, MODE_USER_FILE, STEP_KEYS, SUPPORTED_MODELS, Check,
+                        FrameType, Req, TextKind)
 from .parsers import (MinMax, TextEntry, Toc, parse_disc_byte, parse_disc_loaded, parse_event,
                       parse_minmax, parse_play_state, parse_result, parse_status, parse_text,
-                      parse_toc, user_file_number)
+                      parse_toc_pages, user_file_number)
 from .session import ChangerError, SessionEngine, Timeouts
 from .transport import Transport
 
@@ -29,6 +30,7 @@ class PlayerStatus:
     play_state: str = "unknown"
     play_state_raw: int = 0
     mode: str = "track"
+    mode_param: int = 0             # 0x12 P[6]: user-file bit mask in user-file mode
     random: str = "off"
     repeat: bool = False
     disc_music_type: int = 0
@@ -145,7 +147,7 @@ class ChangerService:
                 s = parse_status(p)
                 self._update(disc=s.disc, track=s.track, pgm_step=s.pgm_step,
                              disc_music_type=s.music_type, disc_user_files=s.user_files,
-                             mode=s.mode, random=s.random, repeat=s.repeat)
+                             mode=s.mode, mode_param=s.mode_param, random=s.random, repeat=s.repeat)
             elif t == FrameType.PLAY_STATE:
                 name, raw = parse_play_state(p)
                 self._update(play_state=name, play_state_raw=raw)
@@ -196,13 +198,27 @@ class ChangerService:
         if not f:
             raise ChangerError("NO_HELLO", "no hello answer")
         model = f.payload.decode("ascii", "replace")
-        self._update(model=model.removeprefix("I'm ").strip(), online=True)
+        name = model.removeprefix("I'm ").strip()
+        if name not in SUPPORTED_MODELS:
+            # Only changers whose protocol is verified are accepted (PROT §5). The identifier goes into
+            # the error so that the user can report it.
+            self._update(model=name, online=False)
+            raise ChangerError("UNSUPPORTED_MODEL", name)
+        self._update(model=name, online=True)
         return model
 
+    def _ensure_track_mode(self) -> None:
+        """In program, music-type and user-file mode the changer ignores 0x0B (live 2026-11-20): it keeps
+        playing the content of its mode. The original resets the mode first (PROT §7.5), so do we."""
+        if self.status.mode != "track":
+            self.reset_mode()
+
     def play(self, disc: int, track: int = 1) -> None:
+        self._ensure_track_mode()
         self._cmd(C.select(disc, track, True), label=f"play {disc}/{track}")
 
     def load(self, disc: int) -> None:
+        self._ensure_track_mode()
         self._cmd(C.select(disc, 1, False), label=f"load {disc}")
 
     def key(self, name: str, action: str = "tap") -> None:
@@ -216,19 +232,41 @@ class ChangerService:
             self._cmd(C.key(name), C.key_release(), label=f"key {name} tap")
 
     def reset_mode(self) -> None:
+        """Back to track mode. Works from program, music-type and user-file mode (live 2026-11-20)."""
         self._cmd(C.mode_reset(), label="mode reset")
+
+    def change_mode(self, mode: int, param: int = 0) -> int:
+        """Changer play mode (0x0C): MODE_MUSIC_TYPE + music-type code or MODE_USER_FILE + user-file bit.
+        Like the original, a 0x03 A=0x10 request comes first (answer 0x09, live value 08). Returns it."""
+        res = 0
+        if mode in (MODE_MUSIC_TYPE, MODE_USER_FILE):
+            r = self._expect(self._req(C.cmd03(Check.MODE_PLAY, 0, 0, 0, 0,
+                                               param if mode == MODE_MUSIC_TYPE else 0), "mode play check"),
+                             FrameType.RESULT)
+            res = parse_result(r.payload) if r else 0
+        self._cmd(C.change_mode(mode, param), label=f"mode {mode} {param}")
+        return res
+
+    def write_program(self, entries: list[tuple[int, int]]) -> None:
+        """Program list (disc, track; track 0xAA = whole disc). An empty list clears the program and returns
+        the changer to track mode. Only possible while stopped (PROT §7.6)."""
+        self._req(C.cmd03(Check.PROGRAM, 0, 0, 0, 0, 0), "program check")
+        self._cmd(C.program(entries), label=f"program {len(entries)} entries")
 
     def read_minmax(self, disc: int) -> MinMax | None:
         f = self._expect(self._req(C.cmd03(0, Req.MINMAX, disc), "minmax"), FrameType.MINMAX)
         return parse_minmax(f.payload) if f else None
 
     def read_toc(self, disc: int) -> Toc | None:
-        """Only works for the loaded disc; otherwise the changer answers EOT only."""
-        f = self._expect(self._req(C.cmd03(0, Req.TOC, disc), "toc"), FrameType.TOC)
-        if not f:
+        """Only works for the loaded disc; otherwise the changer answers EOT only.
+        Several 0x06 frames (pages, see parse_toc_pages) are joined; an incomplete TOC gives None."""
+        frames = [f.payload for f in self._req(C.cmd03(0, Req.TOC, disc), "toc") if f.ftype == FrameType.TOC]
+        if not frames:
             return None
-        toc = parse_toc(f.payload)
-        return toc if toc.status == 1 else None
+        toc = parse_toc_pages(frames)
+        if toc is None:
+            log.warning("disc %s: incomplete TOC (%d frame(s)) ignored", disc, len(frames))
+        return toc
 
     def read_user_files(self, disc: int) -> int:
         f = self._expect(self._req(C.cmd03(0, Req.USER_FILES, disc), "user files"), FrameType.USER_FILES)
@@ -305,23 +343,21 @@ class ChangerService:
 
     def read_disc_full(self, disc: int, load_timeout: float = 40.0,
                        progress: Callable[[str], None] | None = None) -> DiscRead:
-        """Load disc (no play) if needed, then read TOC, min/max, MT, UF and texts (PROT §10.3)."""
+        """Load disc (no play) if needed, then read TOC, min/max, MT, UF and texts (PROT §10.3).
+        progress() gets the step keys "loading", "toc" and "titles" (translated by the caller)."""
         say = progress or (lambda s: None)
         if self.status.loaded_disc != disc:
-            if self.status.mode != "track":
-                say("Wiedergabemodus zurücksetzen")
-                self.reset_mode()
-            say(f"Disc {disc} wird geladen")
-            self.load(disc)
+            say("loading")
+            self.load(disc)                      # resets a program / music-type / user-file mode first
             if not self.wait_for(lambda s: s.loaded_disc == disc, load_timeout):
                 raise ChangerError("LOAD_TIMEOUT", f"disc {disc} not loaded")
             self.wait_for(lambda s: s.play_state in ("stopped", "playing", "paused"), 5.0)
-        say("Inhaltsverzeichnis lesen")
+        say("toc")
         toc = self.read_toc(disc)
         minmax = self.read_minmax(disc)
         mt = self.read_music_type(disc)
         uf = self.read_user_files(disc)
-        say("Titel lesen")
+        say("titles")
         texts = self.read_texts(disc)
         return DiscRead(disc, toc, minmax, mt, uf, texts)
 

@@ -47,6 +47,12 @@ def store_disc_read(db: Database, r) -> bool:
     return swapped
 
 
+def _step_text(step: str) -> str:
+    """Progress keys of ChangerService.read_disc_full -> UI text."""
+    return {"loading": tr("loading the disc"), "toc": tr("reading the table of contents"),
+            "titles": tr("reading the titles")}.get(step, step)
+
+
 def full_scan(svc: ChangerService, db: Database, slots: list[int], *,
               progress=lambda done, total, text: None, cancel: threading.Event | None = None,
               log_line=lambda text: None, disc_done=lambda slot: None) -> tuple[int, list[int]]:
@@ -59,7 +65,8 @@ def full_scan(svc: ChangerService, db: Database, slots: list[int], *,
             break
         progress(i, len(slots), tr("Disc {0} …").format(slot))
         try:
-            r = svc.read_disc_full(slot, progress=lambda m, s=slot, i=i: progress(i, len(slots), tr("Disc {0}: {1}").format(s, m)))
+            r = svc.read_disc_full(slot, progress=lambda m, s=slot, i=i: progress(
+                i, len(slots), tr("Disc {0}: {1}").format(s, _step_text(m))))
             swapped = store_disc_read(db, r)
             done += 1
             src = {"cdtext": "CD-TEXT", "memory": tr("changer memory")}.get(r.text_source, tr("no titles"))
@@ -89,12 +96,14 @@ def store_loaded_disc(svc: ChangerService, db: Database, disc: int) -> bool:
     texts = svc.read_texts(disc)
     if any(e.source == "cdtext" for e in texts):
         db.save_cdtext(disc, texts)
-    if swapped:
+    memory = [e for e in texts if e.source == "memory"]
+    if memory or swapped:
+        # a loaded disc without CD-TEXT answers with its memory titles: keep the library up to date
+        # (they may have been written by the original program or on the changer since the last read)
         try:
-            db.save_memory(disc, [e for e in texts if e.source == "memory"],
-                           svc.read_music_type(disc), svc.read_user_files(disc))
+            db.save_memory(disc, memory, svc.read_music_type(disc), svc.read_user_files(disc))
         except Exception:
-            log.exception("memory after swap")
+            log.exception("memory of the loaded disc")
     return swapped
 
 
@@ -106,6 +115,7 @@ class ScanManager(QObject):
     started = Signal(str)          # "quick" | "full"
     discRead = Signal(int)         # a disc got a (new) TOC -> metadata lookup can start right away
     discSwapped = Signal(int)      # a different CD than before was found in this slot
+    writeRequested = Signal(list)  # slots whose valid titles should be written to the changer (option)
 
     def __init__(self, backend, db: Database, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -125,8 +135,7 @@ class ScanManager(QObject):
             return False
         if self.running:
             self._queue.append((mode, work_fn, summary))
-            self.logLine.emit("In Warteschlange: " + ("vollständiges" if mode == "full" else "schnelles")
-                              + " Einlesen")
+            self.logLine.emit(tr("Queued: full read") if mode == "full" else tr("Queued: quick read"))
             return True
         self.running, self.mode = True, mode
         self._cancel.clear()
@@ -141,15 +150,21 @@ class ScanManager(QObject):
         self.backend.call(work_fn, done)
         return True
 
-    def quick(self, only_new: bool = False, slots: list[int] | None = None) -> bool:
+    def quick(self, only_new: bool = False, slots: list[int] | None = None, write_titles: bool = False) -> bool:
+        if write_titles and slots:
+            self.writeRequested.emit(list(slots))
         return self._start(
             "quick",
             lambda svc: quick_scan(svc, self.db, only_new=only_new, slots=slots, cancel=self._cancel,
                                    progress=lambda d, t, s: self.progress.emit(d, t, s)),
             lambda n: tr("{0} disc(s) read quickly").format(n))
 
-    def full(self, slots: list[int], fresh: bool = False, keep_user: bool = True) -> bool:
-        """fresh=True ('Alles neu'): forget stored TOC/CD-TEXT/MusicBrainz/cover first."""
+    def full(self, slots: list[int], fresh: bool = False, keep_user: bool = True,
+             write_titles: bool = False) -> bool:
+        """fresh=True ('Alles neu'): forget stored TOC/CD-TEXT/MusicBrainz/cover first.
+        write_titles=True: valid titles of these slots go into the changer memory (app/changer_sync.py)."""
+        if write_titles:
+            self.writeRequested.emit(list(slots))
         def work(svc):
             if fresh:
                 self.db.reset_discs(slots, keep_user=keep_user)

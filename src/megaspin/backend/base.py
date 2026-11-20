@@ -49,7 +49,7 @@ class ChangerBackend(QObject):
     def _deliver(self, cb_info, ok: bool, res) -> None:
         callback, report = cb_info
         if not ok and report:
-            self.error.emit(getattr(res, "code", type(res).__name__), str(res))
+            self.error.emit(getattr(res, "code", type(res).__name__), getattr(res, "detail", "") or str(res))
         if callback:
             callback(ok, res)
 

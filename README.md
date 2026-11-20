@@ -57,7 +57,7 @@ all albums of a user file ("Grill Party"), ready to play in order or shuffled.</
 | **CD-425M** | USA / Canada (same unit as DPF-J6030) | ✅ tested |
 | CD-4260M, CD-4700M | from the same product family (same manual, same PC-LINK) | ❓ probably works, untested. Feedback welcome! |
 
-The changer reports itself as `CD-425M` over the serial link.
+The changer reports its model over the serial link. MegaSpin connects only to changers that report `CD-425M`; the tested DPF-J6030 and CD-425M units both do. If your changer reports something else, MegaSpin shows the identifier. Please [open an issue](https://github.com/pasce/megaspin/issues) with it, so that support for your model can be checked.
 
 ---
 

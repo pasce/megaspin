@@ -52,6 +52,7 @@ class TextKind(IntEnum):
     """Byte B6 of text frames."""
     DISC_TITLE = 0
     TRACK_TITLE = 1
+    ARTIST = 2               # CD-TEXT performer of a loaded disc (track 0 only; tracks stream endlessly). Not used.
     USER_FILE_NAME = 7
 
 
@@ -74,13 +75,25 @@ PLAY_STATES = {
     0x80: "paused", 0x90: "ff", 0xA0: "rew",
 }
 
-# 0x12 P[7] -> (mode, random)
+# 0x12 P[7] -> (mode, random). Live-verified on the CD-425M (2026-11-20): the random key cycles
+# 0 -> 1 -> 2 -> 0 in track mode, 5 <-> 6 in music-type mode and 7 <-> 8 in user-file mode;
+# random in modes 6 and 8 picks discs across the whole genre / user file. Mode 9 was never seen
+# on this changer; the juken documentation lists it as "user file, random all" (kept for safety).
 MODES = {
     0: ("track", "off"), 1: ("track", "one"), 2: ("track", "all"),
     3: ("program", "off"), 4: ("best_sel", "off"),
     5: ("music_type", "off"), 6: ("music_type", "all"),
-    7: ("user_file", "off"), 8: ("user_file", "all"),
+    7: ("user_file", "off"), 8: ("user_file", "all"), 9: ("user_file", "all"),
 }
+
+# Play modes for 0x0C (ChangeMode): P[0] = mode, P[1] = parameter (PROT §7.5)
+MODE_TRACK = 0x00
+MODE_MUSIC_TYPE = 0x05       # parameter: music-type code
+MODE_USER_FILE = 0x07        # parameter: user-file bit mask
+
+# Hello answers ("I'm <model>") of changers MegaSpin supports. Others are refused until someone
+# with such a changer confirms that it speaks the same protocol (README: report the identifier).
+SUPPORTED_MODELS = ("CD-425M",)
 
 # UI index -> name; changer code = 0 if index == 0 else index + 1  (PROT §11.2)
 MUSIC_TYPE_NAMES = [

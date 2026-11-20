@@ -10,13 +10,13 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, 
 
 from ...data.db import Album
 from ...data.names import nice_case
-from ...protocol.commands import to_changer_text
+from ...protocol.commands import changer_disc_title, to_changer_text
 from ...protocol.constants import MUSIC_TYPE_NAMES, music_type_code, music_type_index
 from ...protocol.parsers import split_artist_album
 from ..theme import COLORS
 
 MAX_CHANGER_TRACKS = 20
-SRC = {"user": "eigene", "musicbrainz": "MusicBrainz", "cdtext": "CD-TEXT", "memory": tr("Changer"), "none": "–"}
+SRC = {"user": tr("own"), "musicbrainz": "MusicBrainz", "cdtext": "CD-TEXT", "memory": tr("Changer"), "none": "–"}
 
 
 def _first(*vals):
@@ -24,13 +24,6 @@ def _first(*vals):
         if v not in (None, ""):
             return v
     return None
-
-
-def changer_disc_title(artist: str, album: str) -> str:
-    """The changer stores 'Artist   Album' (three spaces) in one 25-character title."""
-    if artist and album:
-        return f"{artist}   {album}"
-    return artist or album or ""
 
 
 class EditAlbumDialog(QDialog):
@@ -51,8 +44,16 @@ class EditAlbumDialog(QDialog):
         self._auto_year = d.get("mb_year")
         self._mb = (d.get("mb_artist"), d.get("mb_album"))
         self._cd = (cd_a, cd_b)
+        self._changer_disc = d.get("changer_title")      # what the changer memory really holds
         self._changer_mt = d.get("changer_mt") or 0
         self._changer_uf = d.get("changer_uf") or 0
+        self._user_mt, self._user_uf = d.get("user_mt"), d.get("user_uf")
+        self._can_write = can_write
+        self._overrides: dict[int, str] = {}     # row -> text typed into the column "In changer"
+        self._reading = False                    # changer memory is being read in the background
+        self._read_failed = False
+        self._applying = False                   # set while fresh changer data are applied
+        self._genre_dirty = self._uf_dirty = False
 
         root = QVBoxLayout(self)
         form = QGridLayout()
@@ -84,6 +85,9 @@ class EditAlbumDialog(QDialog):
         form.addLayout(ufw, 3, 1, 1, 3)
         form.setColumnStretch(1, 1)
         root.addLayout(form)
+        self.c_genre.currentIndexChanged.connect(self._mark_genre_dirty)
+        for cb in self.uf_boxes:
+            cb.toggled.connect(self._mark_uf_dirty)
 
         self.l_disc_changer = QLabel()
         self.l_disc_changer.setObjectName("Subtitle")
@@ -106,7 +110,7 @@ class EditAlbumDialog(QDialog):
             t = titles.get(no)
             self._set(row, self.COL_NO, str(no), editable=False, align_right=True)
             self._set(row, self.COL_TITLE, t.title if t and t.source != "none" else "")
-            self._set(row, self.COL_CHANGER, "", editable=False, muted=True)
+            self._set(row, self.COL_CHANGER, "", editable=can_write and row < MAX_CHANGER_TRACKS, muted=True)
             self._set(row, self.COL_SRC, SRC.get(t.source, "") if t else "–", editable=False, muted=True)
         self._loading = False
         self.table.itemChanged.connect(self._on_item_changed)
@@ -137,6 +141,7 @@ class EditAlbumDialog(QDialog):
         self.warn.setStyleSheet(f"color: {COLORS['warn']};")
         root.addWidget(self.warn)
         self.cb_write.toggled.connect(self._update_warn)
+        self.cb_write.toggled.connect(self._update_preview)
         self._update_warn()
 
         bb = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
@@ -162,6 +167,14 @@ class EditAlbumDialog(QDialog):
             it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         self.table.setItem(row, col, it)
 
+    def _mark_genre_dirty(self, *_) -> None:
+        if not self._applying:
+            self._genre_dirty = True
+
+    def _mark_uf_dirty(self, *_) -> None:
+        if not self._applying:
+            self._uf_dirty = True
+
     def _title(self, row: int) -> str:
         it = self.table.item(row, self.COL_TITLE)
         return it.text().strip() if it else ""
@@ -171,7 +184,12 @@ class EditAlbumDialog(QDialog):
         return _first(r.get("mb_title"), nice_case(r.get("cdtext_title")), nice_case(r.get("changer_title"))) or ""
 
     def _on_item_changed(self, it: QTableWidgetItem) -> None:
-        if self._loading or it.column() != self.COL_TITLE:
+        if self._loading:
+            return
+        if it.column() == self.COL_CHANGER:
+            self._on_changer_cell_edited(it)
+            return
+        if it.column() != self.COL_TITLE:
             return
         no = it.row() + 1
         self._loading = True
@@ -185,16 +203,46 @@ class EditAlbumDialog(QDialog):
         self._loading = False
         self._update_preview()
 
+    def _on_changer_cell_edited(self, it: QTableWidgetItem) -> None:
+        """Own text for the changer memory (25 characters, ASCII). Editing implies writing it."""
+        row = it.row()
+        if row >= MAX_CHANGER_TRACKS:
+            return
+        self._overrides[row] = to_changer_text(it.text().strip()).decode()
+        if self.cb_write.isEnabled() and not self.cb_write.isChecked():
+            self.cb_write.setChecked(True)               # -> _update_preview via toggled
+        else:
+            self._update_preview()
+
     def _update_preview(self) -> None:
+        """Column 'In changer': what the changer memory really holds. Only when 'Also write to the changer'
+        is checked, it shows (in italics) what will be written instead."""
         self._loading = True
-        disc = to_changer_text(changer_disc_title(self.e_artist.text().strip(), self.e_album.text().strip()))
-        self.l_disc_changer.setText(tr("Disc title in changer: „{0}“").format(disc.decode()))
+        writing = self.cb_write.isChecked() if hasattr(self, "cb_write") else False
+        self.table.horizontalHeaderItem(self.COL_CHANGER).setText(
+            tr("Will be written (25 chars)") if writing else tr("In changer (25 chars)"))
+        if writing:
+            disc = to_changer_text(changer_disc_title(self.e_artist.text().strip(), self.e_album.text().strip()))
+            label = tr("Will be written to the changer: „{0}“").format(disc.decode())
+        elif self._changer_disc:
+            label = tr("Disc title in changer: „{0}“").format(self._changer_disc)
+        else:
+            label = tr("Disc title in changer: – (nothing stored)")
+        if self._reading:
+            label += tr("  ·  reading the changer memory …")
+        elif self._read_failed:
+            label += tr("  ·  changer memory could not be read, stored data shown")
+        self.l_disc_changer.setText(label)
         for row in range(self.table.rowCount()):
             it = self.table.item(row, self.COL_CHANGER)
-            if row >= MAX_CHANGER_TRACKS:
-                it.setText(tr("(not possible – max. 20)"))
+            if writing:
+                it.setText(tr("(not possible – max. 20)") if row >= MAX_CHANGER_TRACKS
+                           else self._overrides.get(row, to_changer_text(self._title(row)).decode()))
             else:
-                it.setText(to_changer_text(self._title(row)).decode())
+                it.setText(self._trk.get(row + 1, {}).get("changer_title") or "")
+            f = it.font()
+            f.setItalic(writing)
+            it.setFont(f)
         self._loading = False
 
     def _update_warn(self) -> None:
@@ -204,7 +252,7 @@ class EditAlbumDialog(QDialog):
                 msgs.append(tr("⚠ This disc has CD-TEXT: the changer replaces your own titles with the CD-TEXT when it is loaded next time. Genre and user files are kept."))
             if self.table.rowCount() > MAX_CHANGER_TRACKS:
                 msgs.append(tr("The changer only stores the titles of the first {0} tracks.").format(MAX_CHANGER_TRACKS))
-            msgs.append(tr("Titles are cut to 25 characters, umlauts are transliterated (preview in the column „In changer“)."))
+            msgs.append(tr("Titles are cut to 25 characters, umlauts are transliterated (preview in the right column)."))
         self.warn.setText("\n".join(msgs))
         self.warn.setVisible(bool(msgs))
 
@@ -232,6 +280,7 @@ class EditAlbumDialog(QDialog):
         self._update_preview()
 
     def _reset(self) -> None:
+        self._overrides.clear()
         self.e_artist.setText(self._auto_artist)
         self.e_album.setText(self._auto_album)
         self.e_year.setText(str(self._auto_year) if self._auto_year else "")
@@ -287,7 +336,57 @@ class EditAlbumDialog(QDialog):
         t = self.titles()
         return {
             "title": changer_disc_title(self.e_artist.text().strip(), self.e_album.text().strip()),
-            "tracks": {no: s for no, s in t.items() if no <= MAX_CHANGER_TRACKS},
+            "tracks": {no: self._overrides.get(no - 1, s) for no, s in t.items() if no <= MAX_CHANGER_TRACKS},
             "music_type": self.music_type,
             "user_files": self.user_files,
         }
+
+    # ------------------------------------------------------------------ background read of the changer memory
+    def set_reading(self, on: bool, failed: bool = False) -> None:
+        self._reading, self._read_failed = on, failed
+        self._update_preview()
+
+    def apply_changer_refresh(self, sources: dict) -> None:
+        """Fresh changer memory arrived while the dialog is open. Fields the user has not changed follow
+        the new data; own entries stay as they are."""
+        d = sources.get("disc", {})
+        old_artist, old_album = self._auto_artist, self._auto_album
+        old_titles = {row: self._auto_title(row + 1) for row in range(self.table.rowCount())}
+        self._trk = sources.get("tracks", {})
+        self._loading = True
+        for row in range(self.table.rowCount(), max(self._trk, default=0)):   # titles for new track numbers
+            self.table.insertRow(row)
+            self._set(row, self.COL_NO, str(row + 1), editable=False, align_right=True)
+            self._set(row, self.COL_TITLE, "")
+            self._set(row, self.COL_CHANGER, "", editable=self._can_write and row < MAX_CHANGER_TRACKS, muted=True)
+            self._set(row, self.COL_SRC, SRC["memory"] if self._trk.get(row + 1, {}).get("changer_title") else "–",
+                      editable=False, muted=True)
+        self._loading = False
+        cd_a, cd_b = self._cd
+        mem_a, mem_b = (nice_case(x) for x in split_artist_album(d.get("changer_title")))
+        self._auto_artist = _first(d.get("mb_artist"), cd_a, mem_a) or ""
+        self._auto_album = _first(d.get("mb_album"), cd_b, mem_b) or ""
+        self._changer_disc = d.get("changer_title")
+        self._changer_mt = d.get("changer_mt") or 0
+        self._changer_uf = d.get("changer_uf") or 0
+        self._applying = True
+        if not self._genre_dirty and self._user_mt is None:
+            self.c_genre.setCurrentIndex(music_type_index(self._changer_mt))
+        if not self._uf_dirty and self._user_uf is None:
+            for n, cb in enumerate(self.uf_boxes, 1):
+                cb.setChecked(bool(self._changer_uf & (1 << (n - 1))))
+        if self.e_artist.text().strip() == old_artist:
+            self.e_artist.setText(self._auto_artist)
+        if self.e_album.text().strip() == old_album:
+            self.e_album.setText(self._auto_album)
+        self._loading = True
+        for row, old in old_titles.items():
+            new = self._auto_title(row + 1)
+            if self._title(row) == old and new != old:
+                self.table.item(row, self.COL_TITLE).setText(new)
+        for row in range(len(old_titles), self.table.rowCount()):          # rows added above
+            self.table.item(row, self.COL_TITLE).setText(self._auto_title(row + 1))
+        self._loading = False
+        self._applying = False
+        self._update_preview()
+        self._update_warn()

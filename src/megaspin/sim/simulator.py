@@ -125,6 +125,8 @@ class ChangerSimulator:
         self.loaded = 149
         self.play_state = 0x40
         self.mode_raw = 0
+        self.mode_param = 0                 # 0x0C parameter (user-file bit in user-file mode)
+        self.program: list[tuple[int, int]] = []
         self.repeat = False
         self.held_key: tuple[int, int] | None = None
         self.uf_names: dict[int, str | None] = {n: None for n in range(1, 9)}
@@ -168,8 +170,9 @@ class ChangerSimulator:
     def _status_frame(self) -> bytes:
         d = self.discs.get(self.disc)
         mt, uf = (d.music_type, d.user_files) if d else (0, 0)
+        p6 = self.mode_param if self.mode_raw in (7, 8, 9) else 0      # live: genre is not echoed in P[6]
         return build_frame(FrameType.STATUS, [self.disc & 0xFF, self.disc >> 8, self.track, 0, mt, uf,
-                                              0, self.mode_raw, 1 if self.repeat else 0])
+                                              p6, self.mode_raw, 1 if self.repeat else 0])
 
     def _push_status(self) -> None:
         self._outbox.append(self._status_frame())
@@ -301,9 +304,14 @@ class ChangerSimulator:
         if t == FrameType.KEY:
             self._apply_key((p[0], p[1]))
         elif t == FrameType.SELECT:
-            self._select(p[0] | p[1] << 8, p[2], bool(p[3]))
+            if self.mode_raw not in (3, 5, 6, 7, 8, 9):    # live: ignored in program/MT/UF mode
+                self._select(p[0] | p[1] << 8, p[2], bool(p[3]))
         elif t == FrameType.MODE:
-            self.mode_raw = 0
+            self._change_mode(p[0], p[1] if len(p) > 1 else 0)
+        elif t == FrameType.PROGRAM:
+            n = p[0] if p else 0
+            self.program = [(p[1 + 3 * i] | p[2 + 3 * i] << 8, p[3 + 3 * i]) for i in range(n)]
+            self.mode_raw = 3 if self.program else 0
             self._push_status()
         elif t == FrameType.TEXT:
             self._store_text(p)
@@ -315,8 +323,10 @@ class ChangerSimulator:
             return [build_frame(FrameType.RESULT, [0x01])]
         if a == 0x40:
             return [build_frame(FrameType.RESULT, [0x02])]
-        if a in (0x10, 0x20):
-            return [build_frame(FrameType.RESULT, [0x01])]
+        if a == 0x10:
+            return [build_frame(FrameType.RESULT, [0x08])]      # live answer before 0C 05 / 0C 07
+        if a == 0x20:
+            return [build_frame(FrameType.RESULT, [0x04])]      # live answer before 0x0D
         d = self.discs.get(disc)
         dl = [disc & 0xFF, disc >> 8]
         if b == 0x02:
@@ -336,7 +346,10 @@ class ChangerSimulator:
         if b == 0x10:
             return [build_frame(FrameType.MUSIC_TYPE, dl + [d.music_type if d else 0])]
         if b == 0x20:
-            return [build_frame(FrameType.PROGRAM, [0])]
+            payload = [len(self.program)]
+            for disc_, track_ in self.program:
+                payload += [disc_ & 0xFF, disc_ >> 8, track_]
+            return [build_frame(FrameType.PROGRAM, payload)]
         if b == 0x01:
             return self._texts(disc, b6, b4)
         return []
@@ -413,6 +426,23 @@ class ChangerSimulator:
             self._push_status()
 
     # ------------------------------------------------------------------ mechanics
+    def _change_mode(self, mode: int, param: int) -> None:
+        """0x0C: 00 = track mode; 05 + music type / 07 + user-file bit start playing that collection."""
+        if mode == 0:
+            self.mode_raw, self.mode_param = 0, 0
+            self._push_status()
+            return
+        if mode == 5:
+            match = [n for n, d in sorted(self.discs.items()) if d.music_type == param]
+        elif mode == 7:
+            match = [n for n, d in sorted(self.discs.items()) if d.user_files & param]
+        else:
+            match = []
+        if not match:
+            return
+        self.mode_raw, self.mode_param = mode, param
+        self._select(match[0], 1, True)
+
     def _select(self, disc: int, track: int, play: bool) -> None:
         if disc not in self.discs:
             return
@@ -455,7 +485,8 @@ class ChangerSimulator:
             self.repeat = not self.repeat
             self._push_status()
         elif key == (0xA1, 0xD4):
-            self.mode_raw = {0: 1, 1: 2}.get(self.mode_raw, 0)
+            # live: track 0 -> 1 -> 2 -> 0, music type 5 <-> 6, user file 7 <-> 8
+            self.mode_raw = {0: 1, 1: 2, 2: 0, 5: 6, 6: 5, 7: 8, 8: 7}.get(self.mode_raw, self.mode_raw)
             self._push_status()
         elif key in ((0xA0, 0xCF), (0xA0, 0xCE)):
             if key == (0xA0, 0xCF) and d and self.track < d.last:

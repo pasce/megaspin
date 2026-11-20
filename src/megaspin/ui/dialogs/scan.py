@@ -52,6 +52,12 @@ class ScanDialog(QDialog):
         row.addStretch()
         lay.addLayout(row)
         self.r_selected.setEnabled(selected_slot_fn() is not None)
+        lay.addSpacing(6)
+        self.cb_write = QCheckBox(tr("Write valid titles into the changer memory"))
+        self.cb_write.setToolTip(tr("Titles from MusicBrainz or your own entries are written once they are known. "
+                                    "Only discs without CD-TEXT (the changer replaces its memory with the CD-TEXT), "
+                                    "and only if the changer memory differs."))
+        lay.addWidget(self.cb_write)
         for r in (self.r_quick, self.r_full, self.r_all, self.r_incomplete, self.r_selected):
             r.toggled.connect(self._update_estimate)
 
@@ -128,6 +134,8 @@ class ScanDialog(QDialog):
             b.style().polish(b)
         for r in (self.r_quick, self.r_full, self.r_all, self.r_incomplete, self.r_selected):
             r.setEnabled(not on and (r is not self.r_selected or self.selected_slot_fn() is not None))
+        if hasattr(self, "cb_write"):
+            self.cb_write.setEnabled(not on)
         if hasattr(self, "cb_fresh"):
             self._update_fresh()
 
@@ -148,9 +156,10 @@ class ScanDialog(QDialog):
                        else tr(" – including your own changes!")) + tr(" Continue?")) \
                     != QMessageBox.StandardButton.Yes:
                 return
-            ok = self.scan.full(slots, fresh=fresh, keep_user=self.cb_keep_user.isChecked())
+            ok = self.scan.full(slots, fresh=fresh, keep_user=self.cb_keep_user.isChecked(),
+                                write_titles=self.cb_write.isChecked())
         else:
-            ok = self.scan.quick(slots=slots)
+            ok = self.scan.quick(slots=slots, write_titles=self.cb_write.isChecked())
         if ok:
             self._set_running(True)
 

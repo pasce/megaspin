@@ -15,6 +15,12 @@ log = logging.getLogger(__name__)
 SIM_TARGET = "SIMULATOR"
 
 
+def unsupported_model_text(model: str) -> str:
+    return tr("The changer reports itself as “{0}”. MegaSpin supports only the CD-425M so far. "
+              "Please report this identifier at github.com/pasce/megaspin/issues, so that support "
+              "for your changer can be checked.").format(model)
+
+
 def list_ports() -> list[tuple[str, str]]:
     """[(device, description)] of available serial ports."""
     try:
@@ -92,7 +98,13 @@ class SerialBackend(ChangerBackend):
             svc.add_listener(self._on_status)
             self.svc = svc
             svc.start(hello=False)
-            model = svc.hello()
+            try:
+                model = svc.hello()
+            except ChangerError as e:
+                if e.code == "UNSUPPORTED_MODEL":
+                    log.warning("changer identified as %r, which is not supported", e.detail)
+                    raise ChangerError("UNSUPPORTED_MODEL", unsupported_model_text(e.detail)) from None
+                raise
             svc.wait_for(lambda s: s.loaded_disc != 0 and s.play_state != "unknown", 3.0)
             return model
 
@@ -103,7 +115,8 @@ class SerialBackend(ChangerBackend):
                 self.connectionChanged.emit(True, f"{self.svc.status.model} · {self._label()}")
                 self.statusChanged.emit(self.svc.status.to_dict(), ["*"])
             else:
-                self.connectionChanged.emit(False, str(res))
+                unsupported = isinstance(res, ChangerError) and res.code == "UNSUPPORTED_MODEL"
+                self.connectionChanged.emit(False, tr("Changer not supported") if unsupported else str(res))
                 self._teardown()
             if callback:
                 callback(ok, res)

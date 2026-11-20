@@ -30,8 +30,13 @@ def select(disc: int, track: int = 1, play: bool = True) -> bytes:
     return build_frame(FrameType.SELECT, [disc & 0xFF, (disc >> 8) & 0xFF, track, 1 if play else 0])
 
 
+def change_mode(mode: int, param: int = 0) -> bytes:
+    """0x0C ChangeMode: 05 + music-type code, 07 + user-file bit mask, 00 00 = track mode (PROT §7.5)."""
+    return build_frame(FrameType.MODE, [mode & 0xFF, param & 0xFF])
+
+
 def mode_reset() -> bytes:
-    return build_frame(FrameType.MODE, [0, 0])
+    return change_mode(0, 0)
 
 
 def program(entries: list[tuple[int, int]]) -> bytes:
@@ -44,6 +49,13 @@ def program(entries: list[tuple[int, int]]) -> bytes:
 
 _TRANSLIT = {"ä": "ae", "ö": "oe", "ü": "ue", "Ä": "Ae", "Ö": "Oe", "Ü": "Ue", "ß": "ss",
              "’": "'", "‘": "'", "“": '"', "”": '"', "–": "-", "—": "-", "…": "..."}
+
+
+def changer_disc_title(artist: str, album: str) -> str:
+    """The changer stores 'Artist   Album' (three spaces) in one 25-character title."""
+    if artist and album:
+        return f"{artist}   {album}"
+    return artist or album or ""
 
 
 def to_changer_text(text: str, limit: int = MEMORY_TITLE_LEN) -> bytes:

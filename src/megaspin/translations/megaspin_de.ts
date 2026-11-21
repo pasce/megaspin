@@ -567,6 +567,10 @@
             <translation>Fehlerhafter Frame (Prüfsumme)</translation>
         </message>
         <message>
+            <source>Feedback</source>
+            <translation>Feedback</translation>
+        </message>
+        <message>
             <source>Filter (text or hex) …</source>
             <translation>Filter (Text oder Hex) …</translation>
         </message>
@@ -1241,6 +1245,14 @@ Ab dem nächsten Track stimmt die Anzeige wieder.</translation>
         <message>
             <source>Searching…</source>
             <translation>Suche…</translation>
+        </message>
+        <message>
+            <source>Send Feedback, Bugs or Features</source>
+            <translation>Feedback, Fehler oder Funktionswünsche senden</translation>
+        </message>
+        <message>
+            <source>Send feedback, report a bug or request a feature</source>
+            <translation>Feedback senden, Fehler melden oder Funktion wünschen</translation>
         </message>
         <message>
             <source>Settings</source>

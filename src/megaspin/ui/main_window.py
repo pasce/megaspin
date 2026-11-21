@@ -250,12 +250,20 @@ class MainWindow(QMainWindow):
         menu.addAction(icon("settings"), tr("Settings … (Ctrl+,)"), self.open_settings)
         menu.addAction(tr("Protocol console … (F12)"), self.open_console)
         self.b_menu.setMenu(menu)
+        self.b_feedback = QToolButton()
+        self.b_feedback.setText(tr("Feedback"))
+        self.b_feedback.setToolTip(tr("Send feedback, report a bug or request a feature"))
+        self.b_feedback.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        fb_menu = QMenu(self.b_feedback)
+        fb_menu.addAction(tr("Send Feedback, Bugs or Features"), self._open_feedback)
+        self.b_feedback.setMenu(fb_menu)
         self.b_settings = QToolButton()
         self.b_settings.setIcon(icon("settings"))
         self.b_settings.setToolTip(tr("Settings (Ctrl+,)"))
         self.b_settings.clicked.connect(self.open_settings)
         lay.addWidget(self.b_settings)
         lay.addWidget(self.b_menu)
+        lay.addWidget(self.b_feedback)                  # rightmost
         return w
 
     def _build_center(self) -> QWidget:
@@ -1026,6 +1034,13 @@ class MainWindow(QMainWindow):
         if not online:
             self.player.set_now_playing(tr("Not connected"), "", None)
             self.slot_watch.stop()
+
+    def _open_feedback(self) -> None:
+        from PySide6.QtCore import QUrl
+        from PySide6.QtGui import QDesktopServices
+        from ..app.feedback import feedback_url
+        from .. import i18n
+        QDesktopServices.openUrl(QUrl(feedback_url(i18n.active())))
 
     def _mode_label_clicked(self) -> None:
         if self.backend.connected and self.status.get("mode", "track") != "track":

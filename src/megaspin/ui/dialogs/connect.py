@@ -75,7 +75,7 @@ class ConnectDialog(QDialog):
         self.info.setText(tr("{0} serial port(s) found.").format(self.list.count() - 1))
 
     def _search(self) -> None:
-        ports = [d for d, _ in list_ports()]
+        ports = list(dict.fromkeys(d for d, _ in list_ports()))      # each port once
         if not ports:
             self.info.setText(tr("No serial port found."))
             return
@@ -83,8 +83,11 @@ class ConnectDialog(QDialog):
         self.b_search.setEnabled(False)
 
         def work():
-            for dev in ports:
-                model = probe_port(dev)
+            for dev in ports:                     # one port failing must not stop the search
+                try:
+                    model = probe_port(dev)
+                except Exception:
+                    model = None
                 if model:
                     return dev, model
             return None

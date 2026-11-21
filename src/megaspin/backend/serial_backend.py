@@ -31,7 +31,8 @@ def list_ports() -> list[tuple[str, str]]:
 
 
 def probe_port(device: str, timeout: float = 2.0) -> str | None:
-    """Send Hello on a port; return the model string ("I'm CD-425M") or None."""
+    """Send Hello on a port; return the model string ("I'm CD-425M") or None.
+    Any failure on this port (cannot open, write timeout, no answer) gives None, so that a search can go on."""
     from ..protocol import commands as C
     from ..protocol.codec import Ctrl, Frame, FrameParser
     from ..protocol.constants import ACK, ENQ, EOT
@@ -40,8 +41,8 @@ def probe_port(device: str, timeout: float = 2.0) -> str | None:
         tr = SerialTransport(device)
     except Exception:
         return None
-    parser = FrameParser()
     try:
+        parser = FrameParser()
         tr.write(bytes([ENQ]))
         end = time.monotonic() + timeout
         stage = "enq"
@@ -61,6 +62,9 @@ def probe_port(device: str, timeout: float = 2.0) -> str | None:
                                     tr.write(bytes([ACK]))
                                     return m.payload.decode("ascii", "replace")
                         return m.payload.decode("ascii", "replace")
+        return None
+    except Exception:            # e.g. write timeout on a Bluetooth port with nothing attached
+        log.debug("probe of %s failed", device, exc_info=True)
         return None
     finally:
         tr.close()

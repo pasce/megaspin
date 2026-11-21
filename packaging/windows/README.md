@@ -15,6 +15,6 @@ python -m PyInstaller --noconfirm --clean --windowed --name MegaSpin ^
 "%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" packaging\windows\megaspin.iss
 ```
 
-Result: `dist\windows\MegaSpin.exe` (portable folder) and `dist\windows\MegaSpin-0.1.0-beta1-setup-x64.exe`.
+Result: `dist\windows\MegaSpin.exe` (portable folder) and `dist\windows\MegaSpin-0.1.0-beta2-setup-x64.exe`.
 
 The icon (`megaspin.ico`) is generated from `megaspin.svg`, the same disc symbol as the in-app icon.

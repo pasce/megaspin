@@ -3,7 +3,7 @@
 ; Paths are relative to this file.
 
 #define MyAppName "MegaSpin"
-#define MyAppVersion "0.1.0 beta 1"
+#define MyAppVersion "0.1.0 beta 2"
 #define MyAppExe "MegaSpin.exe"
 
 [Setup]
@@ -19,7 +19,7 @@ DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 LicenseFile=LICENSE.txt
 OutputDir=..\..\dist\windows
-OutputBaseFilename=MegaSpin-0.1.0-beta1-setup-x64
+OutputBaseFilename=MegaSpin-0.1.0-beta2-setup-x64
 SetupIconFile=megaspin.ico
 UninstallDisplayIcon={app}\{#MyAppExe}
 Compression=lzma2/max

@@ -37,6 +37,8 @@ class Settings:
     sort: str = "artist"
     group_by: str = "none"
     language: str = "auto"          # "auto" (system language), "en", "de"
+    update_check: bool = True       # ask plaintext.at for a newer version at every start
+    update_dismissed: str = ""      # last version the user cancelled the update popup for
     extra: dict = field(default_factory=dict)
 
     @classmethod

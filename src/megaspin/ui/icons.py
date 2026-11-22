@@ -28,6 +28,9 @@ SVG = {
     "menu": f'<g {_STROKE}><path d="M4 6h16M4 12h16M4 18h16"/></g>',
     "edit": f'<g {_STROKE}><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></g>',
     "refresh": f'<g {_STROKE}><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></g>',
+    "cd": f'<g {_STROKE}><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/>'
+          f'<path d="M6.5 7.5a7.5 7.5 0 0 1 6-3"/></g>',
+    "update": f'<g {_STROKE}><circle cx="12" cy="12" r="9"/><path d="M12 7v7"/><path d="M9 11.5l3 3 3-3"/></g>',
 }
 
 

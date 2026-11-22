@@ -17,7 +17,7 @@ ACCENTS = [("#E04848", tr("Red")), ("#E07A2E", tr("Orange")), ("#D4A72C", tr("Go
 
 
 class SettingsDialog(QDialog):
-    def __init__(self, settings, parent: QWidget | None = None) -> None:
+    def __init__(self, settings, parent: QWidget | None = None, on_check=None) -> None:
         super().__init__(parent)
         self.setWindowTitle(tr("Settings"))
         self.setMinimumWidth(560)
@@ -108,6 +108,22 @@ class SettingsDialog(QDialog):
         h.addWidget(b_open)
         root.addWidget(g)
 
+        # ---- updates (last group, above the buttons)
+        g = QGroupBox(tr("Updates"))
+        h = QVBoxLayout(g)
+        self.cb_update = QCheckBox(tr("Check for updates when MegaSpin starts"))
+        self.cb_update.setChecked(settings.update_check)
+        h.addWidget(self.cb_update)
+        row = QHBoxLayout()
+        self.b_check = QPushButton(tr("Check for Updates"))
+        self.b_check.setEnabled(on_check is not None)
+        if on_check is not None:
+            self.b_check.clicked.connect(on_check)
+        row.addWidget(self.b_check)
+        row.addStretch()
+        h.addLayout(row)
+        root.addWidget(g)
+
         bb = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
         bb.button(QDialogButtonBox.StandardButton.Save).setText(tr("Save"))
         bb.button(QDialogButtonBox.StandardButton.Cancel).setText(tr("Cancel"))
@@ -140,7 +156,7 @@ class SettingsDialog(QDialog):
         s = self.settings
         new = {"port": self.port, "auto_connect": self.cb_auto.isChecked(), "mb_enabled": self.cb_mb.isChecked(),
                "mb_contact": self.e_contact.text().strip(), "accent": self.accent,
-               "language": self.c_lang.currentData()}
+               "language": self.c_lang.currentData(), "update_check": self.cb_update.isChecked()}
         changed = {k: v for k, v in new.items() if getattr(s, k) != v}
         for k, v in new.items():
             setattr(s, k, v)

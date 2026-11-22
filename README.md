@@ -109,7 +109,7 @@ Only three wires are used (RX, TX, GND). Hardware handshake is not needed. MegaS
 
 ## Installation
 
-**Windows (installer):** Download `MegaSpin-0.1.0-beta2-setup-x64.exe` from the [Releases](https://github.com/pasce/megaspin/releases) page and run it. It installs MegaSpin for 64-bit Windows 10/11, with a Start menu entry, an optional desktop shortcut and an uninstaller. The installer is not code-signed yet, so Windows SmartScreen may warn. Click *More info* and then *Run anyway*.
+**Windows (installer):** Download `MegaSpin-0.1.0-beta3-setup-x64.exe` from the [Releases](https://github.com/pasce/megaspin/releases) page and run it. It installs MegaSpin for 64-bit Windows 10/11, with a Start menu entry, an optional desktop shortcut and an uninstaller. The installer is not code-signed yet, so Windows SmartScreen may warn. Click *More info* and then *Run anyway*.
 
 **Other systems (Python):** install it with Python:
 

@@ -32,7 +32,7 @@ def _cap_word(w: str, first: bool) -> str:
 
 
 def nice_case(s: str | None) -> str | None:
-    """'PEARL JAM' -> 'Pearl Jam'. Only all-uppercase text (changer memory, CD-TEXT) is changed;
+    """'NORTHLINE' -> 'Northline'. Only all-uppercase text (changer memory, CD-TEXT) is changed;
     text that already contains lowercase letters is kept exactly as it is."""
     if not s or any(ch.islower() for ch in s) or not any(ch.isalpha() for ch in s):
         return s

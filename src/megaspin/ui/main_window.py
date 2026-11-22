@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (QComboBox, QFileDialog, QFrame, QHBoxLayout, QHea
                                QPushButton, QSpinBox, QSplitter, QStackedWidget, QToolButton, QVBoxLayout,
                                QWidget, QApplication, QInputDialog)
 
+from .. import __version__
 from ..app.changer_sync import ChangerSync
 from ..app.metadata import MetadataService
 from ..app.scan import ScanManager
@@ -119,6 +120,7 @@ class MainWindow(QMainWindow):
         self.status: dict = self.backend.status()
         self._np_album: Album | None = None
         self._closed = False
+        self.update_info = None
         self.setWindowTitle("MegaSpin")
         self.setMinimumSize(1024, 640)
         self.resize(1360, 820)
@@ -196,6 +198,12 @@ class MainWindow(QMainWindow):
         self.sync.message.connect(lambda t: (self.statusBar().showMessage(t, 8000), self.scan.logLine.emit(t)))
         self.sync.written.connect(lambda _slot: self._reload_timer.start())
         QTimer.singleShot(1500, self.meta.enqueue_missing)
+        if settings.update_check:              # parented timer: it dies with the window
+            self._update_timer = QTimer(self)
+            self._update_timer.setSingleShot(True)
+            self._update_timer.setInterval(2500)
+            self._update_timer.timeout.connect(lambda: self._start_update_check(manual=False))
+            self._update_timer.start()
 
         if settings.window_geometry:
             self.restoreGeometry(QByteArray.fromBase64(settings.window_geometry.encode()))
@@ -221,18 +229,26 @@ class MainWindow(QMainWindow):
         name.setObjectName("AppName")
         lay.addWidget(logo)
         lay.addWidget(name)
-        lay.addSpacing(30)
+        lay.addSpacing(14)
+        self.b_rescan = QToolButton()
+        self.b_rescan.setText(tr("Read Discs"))
+        self.b_rescan.setIcon(icon("cd", COLORS["text"], 20))
+        self.b_rescan.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.b_rescan.setToolTip(tr("Read discs …"))
+        self.b_rescan.clicked.connect(self.open_scan_dialog)
+        lay.addWidget(self.b_rescan)
+        lay.addSpacing(10)
+        sep = QFrame()
+        sep.setFrameShape(QFrame.Shape.VLine)
+        sep.setFixedHeight(24)
+        lay.addWidget(sep)
+        lay.addSpacing(10)
         self.search = QLineEdit()
         self.search.setPlaceholderText(tr("Search: artist, album or #slot …"))
         self.search.setClearButtonEnabled(True)
         self.search.setFixedWidth(340)
         lay.addWidget(self.search)
         lay.addStretch()
-        self.b_rescan = QToolButton()
-        self.b_rescan.setIcon(icon("refresh"))
-        self.b_rescan.setToolTip(tr("Read discs …"))
-        self.b_rescan.clicked.connect(self.open_scan_dialog)
-        lay.addWidget(self.b_rescan)
         self.conn_btn = QToolButton()
         self.conn_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.conn_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -249,7 +265,15 @@ class MainWindow(QMainWindow):
         menu.addSeparator()
         menu.addAction(icon("settings"), tr("Settings … (Ctrl+,)"), self.open_settings)
         menu.addAction(tr("Protocol console … (F12)"), self.open_console)
+        menu.addAction(tr("About"), self._open_about)
         self.b_menu.setMenu(menu)
+        # update icon: hidden until the server reports a newer version
+        self.b_update = QToolButton()
+        self.b_update.setIcon(icon("update", COLORS["ok"], 20))
+        self.b_update.setToolTip(tr("Update Available"))
+        self.b_update.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.b_update.clicked.connect(lambda: self._open_download())
+        self.b_update.hide()
         self.b_feedback = QToolButton()
         self.b_feedback.setText(tr("Feedback"))
         self.b_feedback.setToolTip(tr("Send feedback, report a bug or request a feature"))
@@ -263,6 +287,7 @@ class MainWindow(QMainWindow):
         self.b_settings.clicked.connect(self.open_settings)
         lay.addWidget(self.b_settings)
         lay.addWidget(self.b_menu)
+        lay.addWidget(self.b_update)
         lay.addWidget(self.b_feedback)                  # rightmost
         return w
 
@@ -835,7 +860,7 @@ class MainWindow(QMainWindow):
 
     # ------------------------------------------------------------------ settings / console (D8)
     def open_settings(self) -> None:
-        dlg = SettingsDialog(self.settings, self)
+        dlg = SettingsDialog(self.settings, self, on_check=self.check_for_updates_now)
         if not dlg.exec():
             return
         changed = dlg.apply()
@@ -1034,6 +1059,58 @@ class MainWindow(QMainWindow):
         if not online:
             self.player.set_now_playing(tr("Not connected"), "", None)
             self.slot_watch.stop()
+
+    # ------------------------------------------------------------------ updates
+    def check_for_updates_now(self) -> None:
+        self._start_update_check(manual=True)
+
+    def _start_update_check(self, manual: bool) -> None:
+        from ..app.updates import check_for_update
+
+        def done(ok, res):
+            if ok:
+                self._on_update_result(res, manual)
+            elif manual:
+                QMessageBox.warning(self, tr("Check for Updates"),
+                                    tr("The update server could not be reached. Please try again later."))
+        self.backend.run_async(check_for_update, done, report_errors=False)
+
+    def _on_update_result(self, info, manual: bool) -> None:
+        from ..app.updates import should_show_popup
+        if info.update_available:
+            self.update_info = info
+            self.b_update.show()
+            if manual or should_show_popup(info, self.settings.update_dismissed):
+                self._show_update_popup(info)
+        else:
+            self.update_info = None
+            self.b_update.hide()
+            if manual:
+                QMessageBox.information(self, tr("Check for Updates"),
+                                        tr("You have the latest version ({0}).").format(__version__))
+
+    def _show_update_popup(self, info) -> None:
+        from .dialogs.update import UpdateDialog
+        dlg = UpdateDialog(__version__, info, on_download=lambda: self._open_download(info),
+                           on_cancel=lambda: self._dismiss_update(info), parent=self)
+        dlg.exec()
+
+    def _dismiss_update(self, info) -> None:
+        """'Cancel': no more popup for this version; the icon stays."""
+        self.settings.update_dismissed = info.latest
+        self.settings.save()
+
+    def _open_download(self, info=None) -> None:
+        from PySide6.QtCore import QUrl
+        from PySide6.QtGui import QDesktopServices
+        from ..app.updates import allowed_link
+        info = info or self.update_info
+        if info and allowed_link(info.download):
+            QDesktopServices.openUrl(QUrl(info.download))
+
+    def _open_about(self) -> None:
+        from .dialogs.about import AboutDialog
+        AboutDialog(self).exec()
 
     def _open_feedback(self) -> None:
         from PySide6.QtCore import QUrl

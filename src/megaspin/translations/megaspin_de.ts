@@ -99,6 +99,18 @@
             <translation>&lt;b&gt;{0}&lt;/b&gt;&lt;br&gt;{1}&lt;br&gt;Klicken zum Öffnen</translation>
         </message>
         <message>
+            <source>A new version of MegaSpin is available.</source>
+            <translation>Eine neue Version von MegaSpin ist verfügbar.</translation>
+        </message>
+        <message>
+            <source>About</source>
+            <translation>Über</translation>
+        </message>
+        <message>
+            <source>About MegaSpin</source>
+            <translation>Über MegaSpin</translation>
+        </message>
+        <message>
             <source>Accent colour</source>
             <translation>Akzentfarbe</translation>
         </message>
@@ -253,6 +265,14 @@
         <message>
             <source>Changer: </source>
             <translation>Wechsler: </translation>
+        </message>
+        <message>
+            <source>Check for Updates</source>
+            <translation>Nach Updates suchen</translation>
+        </message>
+        <message>
+            <source>Check for updates when MegaSpin starts</source>
+            <translation>Beim Start von MegaSpin nach Updates suchen</translation>
         </message>
         <message>
             <source>check playback mode</source>
@@ -503,6 +523,10 @@
             <translation>Klappe offen</translation>
         </message>
         <message>
+            <source>Download</source>
+            <translation>Herunterladen</translation>
+        </message>
+        <message>
             <source>Duration</source>
             <translation>Dauer</translation>
         </message>
@@ -671,6 +695,10 @@ Ab dem nächsten Track stimmt die Anzeige wieder.</translation>
             <translation>Unvollständig</translation>
         </message>
         <message>
+            <source>Installed version</source>
+            <translation>Installierte Version</translation>
+        </message>
+        <message>
             <source>Interface language</source>
             <translation>Sprache der Oberfläche</translation>
         </message>
@@ -747,6 +775,10 @@ Ab dem nächsten Track stimmt die Anzeige wieder.</translation>
             <translation>Bedeutung</translation>
         </message>
         <message>
+            <source>MegaSpin is a desktop app for 200-disc Kenwood mega CD changers (DPF-J6030, CD-425M). It connects over the PC-LINK serial port and shows the changer as a cover library.</source>
+            <translation>MegaSpin ist eine Desktop-App für Kenwood-Mega-CD-Wechsler mit 200 Fächern (DPF-J6030, CD-425M). Sie verbindet sich über die PC-LINK-Schnittstelle und zeigt den Wechsler als Cover-Bibliothek.</translation>
+        </message>
+        <message>
             <source>memory</source>
             <translation>Speicher</translation>
         </message>
@@ -817,6 +849,10 @@ Ab dem nächsten Track stimmt die Anzeige wieder.</translation>
         <message>
             <source>New playlist …</source>
             <translation>Neue Playlist …</translation>
+        </message>
+        <message>
+            <source>New version</source>
+            <translation>Neue Version</translation>
         </message>
         <message>
             <source>Next</source>
@@ -1092,6 +1128,10 @@ Ab dem nächsten Track stimmt die Anzeige wieder.</translation>
         </message>
         <message>
             <source>Read discs</source>
+            <translation>Discs einlesen</translation>
+        </message>
+        <message>
+            <source>Read Discs</source>
             <translation>Discs einlesen</translation>
         </message>
         <message>
@@ -1391,6 +1431,10 @@ Discs, die nicht im Wechsler sind, erscheinen erst, wenn sie eingelegt und einge
             <translation>Die Sprachänderung wirkt nach einem Neustart von MegaSpin.</translation>
         </message>
         <message>
+            <source>The update server could not be reached. Please try again later.</source>
+            <translation>Der Update-Server konnte nicht erreicht werden. Bitte später erneut versuchen.</translation>
+        </message>
+        <message>
             <source>This disc is currently not in the changer.</source>
             <translation>Diese Disc ist derzeit nicht im Wechsler.</translation>
         </message>
@@ -1465,6 +1509,18 @@ Discs, die nicht im Wechsler sind, erscheinen erst, wenn sie eingelegt und einge
         <message>
             <source>Unknown artist</source>
             <translation>Unbekannter Interpret</translation>
+        </message>
+        <message>
+            <source>Update available</source>
+            <translation>Update verfügbar</translation>
+        </message>
+        <message>
+            <source>Update Available</source>
+            <translation>Update verfügbar</translation>
+        </message>
+        <message>
+            <source>Updates</source>
+            <translation>Updates</translation>
         </message>
         <message>
             <source>User file mode</source>
@@ -1545,6 +1601,10 @@ Discs, die nicht im Wechsler sind, erscheinen erst, wenn sie eingelegt und einge
         <message>
             <source>Years</source>
             <translation>Jahre</translation>
+        </message>
+        <message>
+            <source>You have the latest version ({0}).</source>
+            <translation>Du hast die aktuelle Version ({0}).</translation>
         </message>
         <message>
             <source>{0}
